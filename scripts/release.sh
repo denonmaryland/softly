@@ -30,4 +30,8 @@ git add -A
 git commit -m "Softly $v"
 git tag -a "v$v" -m "Softly $v"
 git push origin HEAD "v$v"
-echo "Tagged v$v. Watch the release build: gh run watch"
+# The Omarchy plugin is listed from its own repo with the plugin at the root.
+split=$(git subtree split --prefix=Linux/plugin)
+git push --force https://github.com/denonmaryland/omarchy-softly.git "$split:main"
+git tag -f "plugin-v$v" "$split" && git push --force https://github.com/denonmaryland/omarchy-softly.git "plugin-v$v:refs/tags/v$v"
+echo "Tagged v$v (apps) and pushed the plugin to omarchy-softly. Watch the release build: gh run watch"

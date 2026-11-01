@@ -103,11 +103,11 @@ Panel {
   function runSetup() { message = "Setting up… Voxtype restarts and Hyprland reloads."; send(["setup", hotkey]) }
   function removeSetup() { message = "Removing Softly's setup…"; send(["teardown"]) }
   function checkUpdate() { checkingUpdate = true; update = null; send(["check-update"]) }
-  function installUpdate() { message = "Installing update and restarting the shell…"; send(["update"]) }
+  function installUpdate() { message = "Updating with omarchy plugin update…"; send(["update"]) }
   readonly property string updateLabel: checkingUpdate ? "Checking…"
     : !update ? "Check for updates"
     : update.error ? "Try again"
-    : update.available ? "Install " + update.latest
+    : update.available ? "Update to " + update.latest
     : "Up to date"
   function ago(at) {
     const s = Math.max(0, Math.floor(Date.now() / 1000 - at))

@@ -9,7 +9,7 @@
     control.py remember <file>       -> keep this transcript in the recent list
     control.py clear-recent          -> forget the recent list
     control.py check-update          -> compare the manifest version with the latest GitHub release
-    control.py update                -> install the latest release over this plugin and restart the shell
+    control.py update                -> run `omarchy plugin update` when a newer release exists
     control.py setup <key>           -> with the user's consent: paste helper, Voxtype output, Hyprland module
     control.py teardown              -> undo setup (settings and vocabulary stay)
 
@@ -17,7 +17,6 @@ Sounds are read live by Service.qml from softly.json. The vocabulary is
 Voxtype's own initial prompt ("A, B, C."), the same format the Mac app uses,
 so the two lists can be copied across by hand.
 """
-import io
 import json
 import os
 import re
@@ -26,7 +25,6 @@ import subprocess
 import sys
 import time
 import urllib.request
-import zipfile
 
 
 def config_home():
@@ -70,8 +68,8 @@ def remember(path):
 
 
 PLUGIN_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REPO = "denonmaryland/softly"
-ASSET = "Softly-omarchy.zip"
+REPO = "denonmaryland/omarchy-softly"
+ID = "io.github.denonmaryland.softly"
 
 
 def plugin_version():
@@ -113,10 +111,9 @@ def latest_release():
     data = json.loads(fetch("https://api.github.com/repos/%s/releases/latest" % REPO))
     tag = str(data.get("tag_name", ""))
     version = tag[1:] if tag.startswith("v") else tag
-    url = next((a.get("browser_download_url") for a in data.get("assets", []) if a.get("name") == ASSET), None)
-    if not version or not url:
-        raise RuntimeError("No Omarchy build in the latest release")
-    return version, url
+    if not version:
+        raise RuntimeError("No release found")
+    return version, str(data.get("html_url", ""))
 
 
 def check_update():
@@ -127,31 +124,27 @@ def check_update():
         return {"current": plugin_version(), "error": str(e)}
 
 
+def git_managed():
+    """True when `omarchy plugin add` installed this folder (it keeps the clone's .git)."""
+    return os.path.isdir(os.path.join(PLUGIN_DIR, ".git"))
+
+
 def update():
+    """Pulls the newer release with Omarchy's own plugin updater. Nothing is
+    downloaded by this helper; a folder install (deploy.sh) is left alone."""
     info = check_update()
     if "error" in info:
         return [info["error"]]
     if not info["available"]:
         return []
-    try:
-        blob = fetch(info["url"], binary=True)
-        with zipfile.ZipFile(io.BytesIO(blob)) as z:
-            names = z.namelist()
-            if not any(n.startswith("io.github.denonmaryland.softly/") for n in names):
-                return ["The download did not contain the plugin"]
-            tmp = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "softly", "update")
-            shutil.rmtree(tmp, ignore_errors=True)
-            z.extractall(tmp)
-        shutil.copytree(os.path.join(tmp, "io.github.denonmaryland.softly"), PLUGIN_DIR, dirs_exist_ok=True)
-        if os.path.exists(PASTE_DEST):
-            shutil.copyfile(PASTE_SRC, PASTE_DEST)
-            os.chmod(PASTE_DEST, 0o755)
-        shutil.rmtree(tmp, ignore_errors=True)
-    except Exception as e:
-        return ["Update failed: " + str(e)]
-    # The shell restart replaces this plugin's running copy; detach so it does not wait on us.
-    subprocess.Popen(["omarchy", "restart", "shell"], start_new_session=True,
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if not git_managed():
+        return ["This copy was installed from a folder; update it from the Softly repo (Linux/deploy.sh)"]
+    code, out, err = run(["omarchy", "plugin", "update", ID, "--yes"], timeout=120)
+    if code != 0:
+        return ["omarchy plugin update failed: " + (err or out or str(code))]
+    if os.path.exists(PASTE_DEST):
+        shutil.copyfile(PASTE_SRC, PASTE_DEST)
+        os.chmod(PASTE_DEST, 0o755)
     return []
 
 
