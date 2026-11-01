@@ -1,0 +1,10 @@
+.build/
+build/
+.swiftpm/
+*.bin
+*.part
+.DS_Store
+
+# Windows build output
+Windows/**/bin/
+Windows/**/obj/

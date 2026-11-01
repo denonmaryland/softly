@@ -1,0 +1,46 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  mac:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+      - run: scripts/build-app.sh
+      - run: ditto -c -k --keepParent "build/Softly.app" Softly-mac.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: mac, path: Softly-mac.zip }
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '8.0.x' }
+      - run: dotnet test Windows/Softly.Core.Tests
+      - run: dotnet publish Windows/Softly -c Release -o out
+      - run: Compress-Archive -Path out\* -DestinationPath Softly-windows.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: Softly-windows.zip }
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cd Linux && zip -r ../Softly-omarchy.zip denon.softly bin
+      - uses: actions/upload-artifact@v4
+        with: { name: linux, path: Softly-omarchy.zip }
+  release:
+    needs: [mac, windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            mac/Softly-mac.zip
+            windows/Softly-windows.zip
+            linux/Softly-omarchy.zip
+          generate_release_notes: true

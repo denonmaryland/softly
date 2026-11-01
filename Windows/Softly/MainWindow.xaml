@@ -1,0 +1,299 @@
+<Window x:Class="Softly.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Softly" Width="1040" Height="720" MinWidth="860" MinHeight="600"
+        WindowStartupLocation="CenterScreen" Background="White"
+        FontFamily="Segoe UI" TextOptions.TextFormattingMode="Ideal" UseLayoutRounding="True">
+  <Window.Resources>
+    <SolidColorBrush x:Key="Ink" Color="#20252B"/>
+    <SolidColorBrush x:Key="Ink2" Color="#46525E"/>
+    <SolidColorBrush x:Key="Muted" Color="#65707C"/>
+    <SolidColorBrush x:Key="Placeholder" Color="#7B8490"/>
+    <SolidColorBrush x:Key="Sidebar" Color="#F0F2F4"/>
+    <SolidColorBrush x:Key="Hairline" Color="#E5E8EB"/>
+    <SolidColorBrush x:Key="Border" Color="#DFE3E7"/>
+    <SolidColorBrush x:Key="Accent" Color="#0064D5"/>
+    <SolidColorBrush x:Key="AccentFill" Color="#DCEAFF"/>
+    <SolidColorBrush x:Key="Green" Color="#27834A"/>
+    <SolidColorBrush x:Key="CardFill" Color="#F6F8FA"/>
+    <SolidColorBrush x:Key="CardBorder" Color="#E2E7EC"/>
+
+    <Style x:Key="NavItem" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="Padding" Value="14,11"/>
+      <Setter Property="Margin" Value="0,0,0,7"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="Bg" CornerRadius="7" Background="Transparent" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Bg" Property="Background" Value="{StaticResource AccentFill}"/>
+                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="Keycap" TargetType="Border">
+      <Setter Property="Background" Value="#F4F5F6"/>
+      <Setter Property="BorderBrush" Value="#D5D9DE"/>
+      <Setter Property="BorderThickness" Value="1,1,1,3"/>
+      <Setter Property="CornerRadius" Value="7"/>
+      <Setter Property="Padding" Value="14,8"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="KeycapText" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#39424C"/>
+    </Style>
+    <Style x:Key="RowTitle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+    </Style>
+    <Style x:Key="RowSub" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+      <Setter Property="Margin" Value="0,4,0,0"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style x:Key="Caption" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+    </Style>
+    <Style x:Key="Headline" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="30"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style x:Key="Subhead" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+      <Setter Property="Margin" Value="0,10,0,0"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style x:Key="Switch" TargetType="CheckBox">
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="CheckBox">
+            <Border x:Name="Track" Width="34" Height="21" CornerRadius="10.5" Background="#C8CDD3">
+              <Ellipse x:Name="Knob" Width="17" Height="17" Fill="White" HorizontalAlignment="Left" Margin="2,0,0,0"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Track" Property="Background" Value="#007AFF"/>
+                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
+                <Setter TargetName="Knob" Property="Margin" Value="0,0,2,0"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="LinkButton" TargetType="Button">
+      <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <ContentPresenter/>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="PlainButton" TargetType="Button">
+      <Setter Property="Background" Value="#F8F9FA"/>
+      <Setter Property="BorderBrush" Value="#DCE1E6"/>
+      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Padding" Value="12,6"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+              <ContentPresenter/>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="220"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- Sidebar -->
+    <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource Border}" BorderThickness="0,0,1,0" Padding="18,26">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Margin="10,12,10,12">
+          <Path Width="24" Height="24" Stroke="{StaticResource Accent}" StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                Data="M12,2 A3,3 0 0 1 15,5 L15,11 A3,3 0 0 1 9,11 L9,5 A3,3 0 0 1 12,2 Z M6,11 A6,6 0 0 0 18,11 M12,17 L12,21 M9,21 L15,21" Stretch="Uniform"/>
+          <TextBlock Text="Softly" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Ink}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Margin="0,28,0,0">
+          <RadioButton x:Name="NavHome" Style="{StaticResource NavItem}" Content="Home" IsChecked="True" Checked="NavChanged"/>
+          <RadioButton x:Name="NavVocabulary" Style="{StaticResource NavItem}" Content="Vocabulary" Checked="NavChanged"/>
+          <RadioButton x:Name="NavPreferences" Style="{StaticResource NavItem}" Content="Preferences" Checked="NavChanged"/>
+        </StackPanel>
+        <StackPanel Grid.Row="3" Margin="10,0,0,2">
+          <TextBlock Text="ON THIS PC" Style="{StaticResource Caption}"/>
+          <TextBlock Text="Whisper · English" FontSize="13" Foreground="{StaticResource Ink2}" Margin="0,7,0,0"/>
+          <TextBlock Text="Audio held in memory only" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,7,0,0"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Content -->
+    <Grid Grid.Column="1">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="66"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+      <Border BorderBrush="#EDF0F2" BorderThickness="0,0,0,1" Padding="34,0">
+        <TextBlock x:Name="HeaderTitle" Text="Home" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource Ink}" VerticalAlignment="Center"/>
+      </Border>
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <Grid Margin="48,40,48,48" HorizontalAlignment="Left" MaxWidth="724">
+
+          <!-- Home -->
+          <StackPanel x:Name="HomePanel">
+            <StackPanel Orientation="Horizontal">
+              <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource Green}" VerticalAlignment="Center"/>
+              <TextBlock x:Name="StatusText" Text="Ready to dictate" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Green}" Margin="7,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="Your words. Right where you need them." FontSize="32" FontWeight="Bold" Foreground="{StaticResource Ink}" Margin="0,14,0,0" TextWrapping="Wrap"/>
+            <TextBlock Text="Speak into the app you’re using. Softly takes it from here." FontSize="15" Foreground="{StaticResource Muted}" Margin="0,14,0,0"/>
+            <Border Background="{StaticResource CardFill}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" CornerRadius="12" Padding="24" Margin="0,50,0,0">
+              <StackPanel Orientation="Horizontal">
+                <Border Style="{StaticResource Keycap}"><TextBlock Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
+                <StackPanel Margin="26,0,0,0" VerticalAlignment="Center">
+                  <TextBlock Text="Hold to speak. Release to paste." FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
+                  <TextBlock Text="Double-tap for hands-free. Press again to finish." FontSize="14" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+            <TextBlock Text="Try it here" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource Ink}" Margin="0,45,0,0"/>
+            <Border BorderBrush="#C9D0D8" BorderThickness="1" CornerRadius="9" Padding="20" Margin="0,16,0,0" Height="154">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="*"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid>
+                  <TextBox x:Name="Practice" FontSize="16" BorderThickness="0" Background="Transparent" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Foreground="{StaticResource Ink}" TextChanged="PracticeChanged"/>
+                  <TextBlock x:Name="PracticeHint" Text="Click here, then hold Right Alt and say something." FontSize="16" Foreground="{StaticResource Placeholder}" Margin="3,1,0,0" IsHitTestVisible="False"/>
+                </Grid>
+                <DockPanel Grid.Row="1" Margin="0,10,0,0">
+                  <Button x:Name="ClearButton" DockPanel.Dock="Right" Content="Clear" Style="{StaticResource PlainButton}" Click="ClearPractice" IsEnabled="False"/>
+                  <TextBlock Text="A temporary place to get comfortable." FontSize="13" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                </DockPanel>
+              </Grid>
+            </Border>
+            <TextBlock Text="Local Whisper. No audio saved. No transcript history." FontSize="13" FontWeight="Medium" Foreground="{StaticResource Ink2}" Margin="0,29,0,0"/>
+            <TextBlock Text="Esc cancels · Your transcript stays on the clipboard after pasting." FontSize="13" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
+          </StackPanel>
+
+          <!-- Vocabulary -->
+          <StackPanel x:Name="VocabularyPanel" Visibility="Collapsed">
+            <TextBlock Text="Words it should know." Style="{StaticResource Headline}"/>
+            <TextBlock Text="Names and terms Whisper gets wrong. They are hinted to the model on every dictation and stay on this PC." Style="{StaticResource Subhead}"/>
+            <DockPanel Margin="0,26,0,0">
+              <Button x:Name="AddButton" DockPanel.Dock="Right" Content="Add" Style="{StaticResource PlainButton}" Margin="10,0,0,0" Click="AddWord" IsEnabled="False"/>
+              <TextBox x:Name="Draft" FontSize="15" Padding="8,6" BorderBrush="#C9D0D8" TextChanged="DraftChanged" KeyDown="DraftKeyDown"/>
+            </DockPanel>
+            <ItemsControl x:Name="WordList" Margin="0,16,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="#E5E8EB" BorderThickness="0,0,0,1" Padding="0,12">
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Content="✕" FontSize="11" Width="24" Height="24" Style="{StaticResource LinkButton}" Foreground="#65707C" Tag="{Binding}" Click="RemoveWord" ToolTip="Remove"/>
+                      <TextBlock Text="{Binding}" FontSize="15" Foreground="#20252B" VerticalAlignment="Center"/>
+                    </DockPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock x:Name="PromptText" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,20,0,0" TextWrapping="Wrap"/>
+          </StackPanel>
+
+          <!-- Preferences -->
+          <StackPanel x:Name="PreferencesPanel" Visibility="Collapsed">
+            <TextBlock Text="Make yourself at home." Style="{StaticResource Headline}"/>
+            <TextBlock Text="A few quiet controls. Everything stays on this PC." Style="{StaticResource Subhead}"/>
+            <StackPanel Margin="0,26,0,0">
+              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
+                <DockPanel>
+                  <Border DockPanel.Dock="Right" Style="{StaticResource Keycap}"><TextBlock Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Dictation shortcut" Style="{StaticResource RowTitle}"/><TextBlock Text="Hold to record · double-tap for hands-free" Style="{StaticResource RowSub}"/></StackPanel>
+                </DockPanel>
+              </Border>
+              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
+                <DockPanel>
+                  <CheckBox x:Name="SoundsSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Click="SoundsChanged"/>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Play sounds" Style="{StaticResource RowTitle}"/><TextBlock Text="A subtle cue when recording starts and ends" Style="{StaticResource RowSub}"/></StackPanel>
+                </DockPanel>
+              </Border>
+              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
+                <DockPanel>
+                  <CheckBox x:Name="MediaSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Click="MediaChanged"/>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Pause music while recording" Style="{StaticResource RowTitle}"/><TextBlock Text="Whatever is playing pauses, then picks up where it left off" Style="{StaticResource RowSub}"/></StackPanel>
+                </DockPanel>
+              </Border>
+              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Right" Text="System default" FontSize="14" FontWeight="Medium" Foreground="{StaticResource Ink2}" VerticalAlignment="Center"/>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Microphone" Style="{StaticResource RowTitle}"/><TextBlock Text="Use the microphone selected in Windows" Style="{StaticResource RowSub}"/></StackPanel>
+                </DockPanel>
+              </Border>
+              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <TextBlock x:Name="ModelText" FontSize="14" FontWeight="Medium" Foreground="{StaticResource Green}"/>
+                    <Button x:Name="ModelAction" Style="{StaticResource LinkButton}" Content="Show Model Folder" Click="ModelActionClick" Visibility="Collapsed"/>
+                  </StackPanel>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Speech model" Style="{StaticResource RowTitle}"/><TextBlock Text="Whisper small.en · Q5_1 · English" Style="{StaticResource RowSub}"/></StackPanel>
+                </DockPanel>
+              </Border>
+              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <Button x:Name="UpdateAction" Style="{StaticResource LinkButton}" Content="Check for updates" HorizontalAlignment="Right" Click="UpdateActionClick"/>
+                    <TextBlock x:Name="UpdateNote" FontSize="11" Foreground="{StaticResource Muted}" TextAlignment="Right" MaxWidth="220" TextWrapping="Wrap" Visibility="Collapsed"/>
+                  </StackPanel>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Updates" Style="{StaticResource RowTitle}"/><TextBlock x:Name="VersionText" Style="{StaticResource RowSub}"/></StackPanel>
+                </DockPanel>
+              </Border>
+            </StackPanel>
+            <TextBlock Text="SHORTCUT" Style="{StaticResource Caption}" Margin="0,29,0,0"/>
+            <TextBlock x:Name="HookText" FontSize="13" Foreground="{StaticResource Green}" Margin="0,12,0,0" Text="✓ Right Alt is reserved for Softly while it runs"/>
+          </StackPanel>
+        </Grid>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</Window>

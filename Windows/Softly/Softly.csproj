@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Softly</RootNamespace>
+    <AssemblyName>Softly</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>0.1.0</Version>
+    <Product>Softly</Product>
+    <Company>DeNon Maryland</Company>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Whisper.net" Version="1.7.4" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.7.4" />
+    <PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.7.4" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- WinForms is only here for the tray icon; keep its types out of the global usings. -->
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Softly.Core/Softly.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Sounds\*.wav" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

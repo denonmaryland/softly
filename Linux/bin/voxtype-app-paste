@@ -1,0 +1,99 @@
+#!/bin/bash
+# App-aware paste for Voxtype (Quiet Dictation customization).
+#
+# Voxtype runs in clipboard mode and calls this as:
+#   pre_output_command  = "voxtype-app-paste save"   (before it copies the transcript)
+#   post_output_command = "voxtype-app-paste paste"  (after it copies the transcript)
+#
+# Paste follows Omarchy's universal paste rule: Ctrl+V for normal apps,
+# Shift+Insert for windows tagged "terminal". Keys go through Hyprland
+# send_key_state instead of a virtual keyboard, which Electron apps such as
+# MonoCode ignored for Shift+Insert. The transcript stays on the clipboard,
+# including when no text field accepts the automatic paste.
+#
+# Voxtype also runs post_output_command after cancel/no-speech resets; those
+# never run "save", so "paste" finds no state and does nothing. A file-output
+# recording leaves the clipboard empty after save; the prior contents are
+# recovered without sending a paste. Identical consecutive dictations still paste.
+
+set -u
+
+state="${XDG_RUNTIME_DIR:-/tmp}/voxtype-app-paste"
+
+lua_key() {
+  hyprctl dispatch "hl.dsp.send_key_state({ mods = \"$1\", key = \"$2\", state = \"$3\" })" 2>&1
+}
+
+send_shortcut() {
+  local out
+  out=$(lua_key "$1" "$2" down)
+  if [[ -z $out || $out == ok ]]; then
+    sleep 0.05
+    lua_key "$1" "$2" up >/dev/null
+  else
+    hyprctl dispatch sendshortcut "$1,$2," >/dev/null 2>&1
+  fi
+}
+
+save() {
+  rm -rf "$state"
+  mkdir -m 700 -p "$state" || exit 0
+
+  local types type=""
+  types=$(wl-paste --list-types 2>/dev/null)
+  if [[ -n $types ]]; then
+    for preferred in "text/plain;charset=utf-8" "text/plain" "image/png"; do
+      if grep -qxF "$preferred" <<<"$types"; then type=$preferred; break; fi
+    done
+    [[ -z $type ]] && type=$(head -n1 <<<"$types")
+    wl-paste --no-newline --type "$type" >"$state/clip" 2>/dev/null || type=""
+  fi
+
+  printf '%s' "$type" >"$state/type"
+  touch "$state/armed"
+  # Distinguish new output even when it repeats the previous transcript.
+  wl-copy --clear
+}
+
+recover_previous() {
+  local type
+  type=$(<"$state/type")
+  if [[ -n $type ]]; then
+    wl-copy --type "$type" <"$state/clip"
+  fi
+  rm -rf "$state"
+}
+
+paste() {
+  [[ -f $state/armed ]] || exit 0
+  # Ignore stale state from an interrupted run.
+  if [[ -z $(find "$state/armed" -mmin -1 2>/dev/null) ]]; then rm -rf "$state"; exit 0; fi
+  rm -f "$state/armed"
+
+  wl-paste --no-newline --type text/plain >"$state/dictated" 2>/dev/null
+  if [[ ! -s $state/dictated ]]; then
+    recover_previous   # no clipboard output: recover without pasting
+    exit 0
+  fi
+
+  if hyprctl activewindow -j 2>/dev/null | jq -e '(.tags // []) | map(sub("\\*$"; "")) | index("terminal")' >/dev/null; then
+    send_shortcut SHIFT Insert
+  else
+    send_shortcut CTRL V
+  fi
+
+  # Notify the overlay only after a real transcript was copied; no text is sent.
+  omarchy-shell denon.softly complete >/dev/null 2>&1 || true
+  # Keep the last few dictations for the bar popover (runtime dir only, never on disk).
+  python3 -I "$HOME/.config/omarchy/plugins/denon.softly/helpers/control.py" remember "$state/dictated" >/dev/null 2>&1 || true
+
+  # Keep dictated text available for Ctrl+V, whether or not paste was accepted.
+  rm -rf "$state"
+}
+
+case "${1:-}" in
+  save) save ;;
+  paste) paste ;;
+  *) echo "usage: voxtype-app-paste save|paste" >&2; exit 2 ;;
+esac
+exit 0
