@@ -71,6 +71,7 @@ public partial class App : Application
             "open" => Run(OpenWindow),
             "cancel" => Run(() => engine.CancelNow()),
             "check-update" => Run(() => updater.Check()),
+            "install-update" => Run(() => updater.Install()),
             "update-state" => Task.FromResult($"{updater.State} {updater.LatestVersion} {updater.Error} current={Updater.CurrentVersion}"),
             "quit" => Run(() => Shutdown()),
             var t when t.StartsWith("paste ") => Run(() => Paster.Paste(t.Substring(6), Dispatcher)),
