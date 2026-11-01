@@ -225,7 +225,7 @@ Item {
     }
 
     IpcHandler {
-        target: "denon.softly"
+        target: "io.github.denonmaryland.softly"
         function press(): void { root.handle("press") }
         function release(): void { root.handle("release") }
         function toggle(): void { root.handle("toggle") }
@@ -266,7 +266,7 @@ Item {
         implicitHeight: 64
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
-        WlrLayershell.namespace: "denon-softly"
+        WlrLayershell.namespace: "softly"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
         mask: Region { item: clockArea }

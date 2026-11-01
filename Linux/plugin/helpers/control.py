@@ -10,6 +10,8 @@
     control.py clear-recent          -> forget the recent list
     control.py check-update          -> compare the manifest version with the latest GitHub release
     control.py update                -> install the latest release over this plugin and restart the shell
+    control.py setup <key>           -> with the user's consent: paste helper, Voxtype output, Hyprland module
+    control.py teardown              -> undo setup (settings and vocabulary stay)
 
 Sounds are read live by Service.qml from softly.json. The vocabulary is
 Voxtype's own initial prompt ("A, B, C."), the same format the Mac app uses,
@@ -18,6 +20,7 @@ so the two lists can be copied across by hand.
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -134,17 +137,15 @@ def update():
         blob = fetch(info["url"], binary=True)
         with zipfile.ZipFile(io.BytesIO(blob)) as z:
             names = z.namelist()
-            if not any(n.startswith("denon.softly/") for n in names):
+            if not any(n.startswith("io.github.denonmaryland.softly/") for n in names):
                 return ["The download did not contain the plugin"]
             tmp = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "softly", "update")
             shutil.rmtree(tmp, ignore_errors=True)
             z.extractall(tmp)
-        shutil.copytree(os.path.join(tmp, "denon.softly"), PLUGIN_DIR, dirs_exist_ok=True)
-        paste = os.path.join(tmp, "bin", "voxtype-app-paste")
-        if os.path.exists(paste):
-            dest = os.path.expanduser("~/.local/bin/voxtype-app-paste")
-            shutil.copyfile(paste, dest)
-            os.chmod(dest, 0o755)
+        shutil.copytree(os.path.join(tmp, "io.github.denonmaryland.softly"), PLUGIN_DIR, dirs_exist_ok=True)
+        if os.path.exists(PASTE_DEST):
+            shutil.copyfile(PASTE_SRC, PASTE_DEST)
+            os.chmod(PASTE_DEST, 0o755)
         shutil.rmtree(tmp, ignore_errors=True)
     except Exception as e:
         return ["Update failed: " + str(e)]
@@ -152,6 +153,159 @@ def update():
     subprocess.Popen(["omarchy", "restart", "shell"], start_new_session=True,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return []
+
+
+# ---------------------------------------------------------------- set up
+# Softly needs three things on a machine; each is written only when the user
+# presses Set up, and every file is backed up first (name.bak.<time>-softly).
+HYPR_DIR = os.path.join(config_home(), "hypr")
+HYPRLAND = os.path.join(HYPR_DIR, "hyprland.lua")
+MODULE = os.path.join(HYPR_DIR, "softly.lua")
+MARK = "-- Softly (remove via its panel)"
+LOADER = ('do local d = debug.getinfo(1, "S").source:match("^@(.*/)") or os.getenv("HOME") .. "/.config/hypr/"; '
+          'local p = d .. "softly.lua"; local f = io.open(p); if f then f:close(); dofile(p) end end ' + MARK)
+PASTE_SRC = os.path.join(PLUGIN_DIR, "bin", "softly-paste")
+PASTE_DEST = os.path.expanduser("~/.local/bin/softly-paste")
+VOXTYPE_CONFIG = os.path.join(config_home(), "voxtype", "config.toml")
+VOXTYPE_KEYS = {
+    "output.mode": "clipboard",
+    "output.pre_output_command": PASTE_DEST + " save",
+    "output.post_output_command": PASTE_DEST + " paste",
+    "osd.enabled": "false",      # the pill replaces Voxtype's overlay
+    "hotkey.enabled": "false",   # Hyprland drives it
+}
+HOTKEY_RE = re.compile(r"^[A-Za-z0-9_]+( *\+ *[A-Za-z0-9_]+)*$")
+
+
+def backup(path):
+    if os.path.exists(path):
+        shutil.copy2(path, "%s.bak.%s-softly" % (path, time.strftime("%Y%m%d-%H%M%S")))
+
+
+def atomic_write(path, text, mode=0o644):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(text)
+    os.chmod(tmp, mode)
+    os.replace(tmp, path)
+
+
+def read_text(path):
+    try:
+        with open(path) as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def module_hotkey():
+    m = re.match(r"-- softly-hotkey: (.+)", read_text(MODULE))
+    return m.group(1).strip() if m else ""
+
+
+def render_module(hotkey):
+    with open(os.path.join(PLUGIN_DIR, "hypr", "module.lua")) as f:
+        text = f.read()
+    unbind = 'hl.unbind("F9")  -- Omarchy binds F9 to Voxtype itself' if hotkey.replace(" ", "").upper() == "F9" else "-- (the stock F9 Voxtype binding is left alone)"
+    return text.replace("@HOTKEY@", hotkey).replace("@UNBIND@", unbind)
+
+
+def voxtype_get(key):
+    code, out, _ = run(["voxtype", "config", "get", key])
+    return out.strip() if code == 0 else None
+
+
+def setup_state():
+    paste_ok = os.path.exists(PASTE_DEST) and read_text(PASTE_DEST) == read_text(PASTE_SRC)
+    vox_ok = shutil.which("voxtype") is not None and all(voxtype_get(k) == v for k, v in VOXTYPE_KEYS.items())
+    hypr_ok = MARK in read_text(HYPRLAND) and os.path.exists(MODULE)
+    return {
+        "paste": paste_ok, "voxtype": vox_ok, "hypr": hypr_ok,
+        "complete": paste_ok and vox_ok and hypr_ok,
+        "hotkey": module_hotkey(),
+        "voxtypeInstalled": shutil.which("voxtype") is not None,
+    }
+
+
+def hypr_errors():
+    code, out, err = run(["hyprctl", "configerrors"])
+    text = (out + "\n" + err).strip()
+    return [l for l in text.splitlines() if l.strip() and "no errors" not in l.lower()]
+
+
+def setup(hotkey):
+    hotkey = hotkey.strip()
+    if not HOTKEY_RE.match(hotkey):
+        return ["Not a usable key name: " + hotkey]
+    if shutil.which("voxtype") is None:
+        return ["Voxtype is not installed. Run: omarchy pkg add voxtype"]
+    if run(["hyprctl", "version"])[0] != 0:
+        return ["Hyprland is not running"]
+    errors = []
+    # 1. The paste helper.
+    try:
+        os.makedirs(os.path.dirname(PASTE_DEST), exist_ok=True)
+        shutil.copyfile(PASTE_SRC, PASTE_DEST)
+        os.chmod(PASTE_DEST, 0o755)
+    except OSError as e:
+        return ["Could not install the paste helper: " + str(e)]
+    # 2. Voxtype: clipboard output through the helper, its own overlay and hotkey off.
+    backup(VOXTYPE_CONFIG)
+    for key, value in VOXTYPE_KEYS.items():
+        code, out, err = run(["voxtype", "config", "set", key, value])
+        if code != 0:
+            errors.append("Voxtype %s: %s" % (key, err or out))
+    if errors:
+        return errors
+    run(["systemctl", "--user", "restart", "voxtype"], timeout=30)
+    # 3. Hyprland: the module, loaded by one marked line.
+    backup(HYPRLAND)
+    try:
+        atomic_write(MODULE, render_module(hotkey))
+        text = read_text(HYPRLAND)
+        if MARK not in text:
+            if text and not text.endswith("\n"):
+                text += "\n"
+            atomic_write(HYPRLAND, text + LOADER + "\n")
+    except OSError as e:
+        return ["Could not write the Hyprland module: " + str(e)]
+    run(["hyprctl", "reload"])
+    problems = [l for l in hypr_errors() if "softly" in l.lower()]
+    if problems:
+        return ["Hyprland rejected the module: " + problems[0]]
+    return []
+
+
+def without_loader(text):
+    return "".join(l for l in text.splitlines(True) if MARK not in l)
+
+
+def teardown():
+    errors = []
+    text = read_text(HYPRLAND)
+    if MARK in text:
+        backup(HYPRLAND)
+        try:
+            atomic_write(HYPRLAND, without_loader(text))
+        except OSError as e:
+            errors.append("Could not edit hyprland.lua: " + str(e))
+    try:
+        if os.path.exists(MODULE):
+            os.remove(MODULE)
+    except OSError as e:
+        errors.append(str(e))
+    run(["hyprctl", "reload"])
+    if shutil.which("voxtype"):
+        backup(VOXTYPE_CONFIG)
+        for key in VOXTYPE_KEYS:
+            run(["voxtype", "config", "unset", key])
+        run(["systemctl", "--user", "restart", "voxtype"], timeout=30)
+    try:
+        if os.path.exists(PASTE_DEST):
+            os.remove(PASTE_DEST)
+    except OSError as e:
+        errors.append(str(e))
+    return errors
 
 
 def read_settings():
@@ -223,6 +377,7 @@ def state(errors=None):
         "model": os.path.basename(model) if model else "",
         "recent": read_recent(),
         "version": plugin_version(),
+        "setup": setup_state(),
     }
 
 
@@ -256,6 +411,10 @@ def main(argv):
         return 0
     elif cmd == "update":
         errors = update()
+    elif cmd == "setup" and len(argv) == 3:
+        errors = setup(argv[2])
+    elif cmd == "teardown":
+        errors = teardown()
     elif cmd != "state":
         errors = ["Unknown command: " + " ".join(argv[1:])]
     print(json.dumps(state(errors)))

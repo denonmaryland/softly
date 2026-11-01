@@ -1,9 +1,10 @@
 #!/bin/bash
-# App-aware paste for Voxtype (Quiet Dictation customization).
+# Softly's app-aware paste for Voxtype. Installed to ~/.local/bin/softly-paste by
+# the plugin's Set up (helpers/control.py), which also points Voxtype at it:
 #
 # Voxtype runs in clipboard mode and calls this as:
-#   pre_output_command  = "voxtype-app-paste save"   (before it copies the transcript)
-#   post_output_command = "voxtype-app-paste paste"  (after it copies the transcript)
+#   pre_output_command  = "~/.local/bin/softly-paste save"   (before it copies the transcript)
+#   post_output_command = "~/.local/bin/softly-paste paste"  (after it copies the transcript)
 #
 # Paste follows Omarchy's universal paste rule: Ctrl+V for normal apps,
 # Shift+Insert for windows tagged "terminal". Keys go through Hyprland
@@ -18,7 +19,7 @@
 
 set -u
 
-state="${XDG_RUNTIME_DIR:-/tmp}/voxtype-app-paste"
+state="${XDG_RUNTIME_DIR:-/tmp}/softly-paste"
 
 lua_key() {
   hyprctl dispatch "hl.dsp.send_key_state({ mods = \"$1\", key = \"$2\", state = \"$3\" })" 2>&1
@@ -83,9 +84,9 @@ paste() {
   fi
 
   # Notify the overlay only after a real transcript was copied; no text is sent.
-  omarchy-shell denon.softly complete >/dev/null 2>&1 || true
+  omarchy-shell io.github.denonmaryland.softly complete >/dev/null 2>&1 || true
   # Keep the last few dictations for the bar popover (runtime dir only, never on disk).
-  python3 -I "$HOME/.config/omarchy/plugins/denon.softly/helpers/control.py" remember "$state/dictated" >/dev/null 2>&1 || true
+  python3 -I "$HOME/.config/omarchy/plugins/io.github.denonmaryland.softly/helpers/control.py" remember "$state/dictated" >/dev/null 2>&1 || true
 
   # Keep dictated text available for Ctrl+V, whether or not paste was accepted.
   rm -rf "$state"
@@ -94,6 +95,6 @@ paste() {
 case "${1:-}" in
   save) save ;;
   paste) paste ;;
-  *) echo "usage: voxtype-app-paste save|paste" >&2; exit 2 ;;
+  *) echo "usage: softly-paste save|paste" >&2; exit 2 ;;
 esac
 exit 0

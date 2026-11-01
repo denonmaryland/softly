@@ -1,4 +1,3 @@
-import "../denon.bar/panels" as Motion
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -12,8 +11,8 @@ import qs.Commons
 // helpers/control.py, which restarts the daemon.
 Panel {
   id: root
-  moduleName: "denon.softly"
-  ipcTarget: "denon.softly-settings"
+  moduleName: "io.github.denonmaryland.softly"
+  ipcTarget: "io.github.denonmaryland.softly.settings"
   manageIpc: false
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -32,6 +31,9 @@ Panel {
   property string model: ""
   property var recent: []       // [{text, at}], newest first
   property string version: ""
+  property var setup: null      // {paste, voxtype, hypr, complete, hotkey, voxtypeInstalled}
+  readonly property string hotkey: String(setting("hotkey", "F9") || "F9")
+  readonly property bool setUp: !!(setup && setup.complete)
   property var update: null     // {current, latest, available, url} or {error}
   property bool checkingUpdate: false
   property string message: ""
@@ -43,10 +45,11 @@ Panel {
   readonly property int rowCount: wordRow0 + vocabulary.length
 
   readonly property bool busy: readProc.running || writeProc.running || pending.length > 0
-  readonly property string statusText: service !== "active" ? "Voxtype is not running"
+  readonly property string statusText: setup && !setup.complete ? "Not set up on this machine yet"
+    : service !== "active" ? "Voxtype is not running"
     : daemon === "recording" || daemon === "streaming" ? "Recording…"
     : daemon === "transcribing" ? "Transcribing…"
-    : daemon === "idle" ? "Ready · hold F9, or double-tap for hands-free" : "Starting…"
+    : daemon === "idle" ? "Ready · hold " + hotkey + ", or double-tap for hands-free" : "Starting…"
 
   function alphaOf(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
   function refresh() { if (!busy) readProc.running = true }
@@ -61,9 +64,12 @@ Panel {
       model = s.model || ""
       recent = s.recent || []
       version = s.version || ""
+      setup = s.setup || null
       if (s.update) { update = s.update; checkingUpdate = false }
       if (s.errors && s.errors.length) message = s.errors.join("\n")
       else if (message.indexOf("Saving") === 0) message = "Saved · Voxtype restarted"
+      else if (message.indexOf("Setting up") === 0) message = setup && setup.complete ? "Set up · hold " + hotkey + " to dictate" : "Setup did not finish"
+      else if (message.indexOf("Removing") === 0) message = "Softly's setup was removed"
     } catch (e) { message = "Could not read dictation settings." }
   }
   function send(args) { pending = pending.concat([args]); drain() }
@@ -91,9 +97,11 @@ Panel {
     message = "Saving and restarting Voxtype…"
     send(["remove", w])
   }
-  function preview() { Quickshell.execDetached(["omarchy-shell", "denon.softly", "preview"]) }
+  function preview() { Quickshell.execDetached(["omarchy-shell", "io.github.denonmaryland.softly", "preview"]) }
   function copyText(t) { Quickshell.execDetached(["wl-copy", "--", t]); message = "Copied" }
   function clearRecent() { recent = []; send(["clear-recent"]) }
+  function runSetup() { message = "Setting up… Voxtype restarts and Hyprland reloads."; send(["setup", hotkey]) }
+  function removeSetup() { message = "Removing Softly's setup…"; send(["teardown"]) }
   function checkUpdate() { checkingUpdate = true; update = null; send(["check-update"]) }
   function installUpdate() { message = "Installing update and restarting the shell…"; send(["update"]) }
   readonly property string updateLabel: checkingUpdate ? "Checking…"
@@ -122,7 +130,7 @@ Panel {
   Timer { id: poll; interval: 2000; repeat: true; onTriggered: root.refresh() }
 
   IpcHandler {
-    target: "denon.softly-settings"
+    target: "io.github.denonmaryland.softly.settings"
     function open(): void { root.open() }
     function close(): void { root.close() }
     function toggle(): void { root.toggle() }
@@ -152,20 +160,31 @@ Panel {
     bar: root.bar
     text: "󰍬"
     tooltipText: "Softly · sounds, vocabulary & status"
-    onPressed: if (!Motion.PanelMotion.commitHover(root)) root.toggle()
+    onPressed: if (!(root.popup && root.popup.commitHover(root))) root.toggle()
   }
-  Motion.PopupPanel {
-    id: panel
-    anchorItem: button
-    owner: root
-    bar: root.bar
-    open: root.opened
-    focusTarget: keyboard
-    contentWidth: panel.fittedContentWidth(Style.space(340))
-    contentHeight: panel.fittedContentHeight(content.implicitHeight, Style.space(640))
+
+  // The popup host is Omarchy's stock card, or the frosted host from the
+  // denon.bar plugin when that is installed. The content is reparented into
+  // whichever loads (hosts/*.qml).
+  property bool hostChosen: false
+  property bool useGlassHost: false
+  readonly property var popup: hostLoader.item
+  readonly property Item keyboardItem: keyboard
+  readonly property real contentImplicitHeight: content.implicitHeight
+  FileView {
+    path: root.pluginDir + "/../denon.bar/panels/PopupPanel.qml"
+    printErrors: false
+    onLoaded: { root.useGlassHost = true; root.hostChosen = true }
+    onLoadFailed: root.hostChosen = true
+  }
+  onHostChosenChanged: hostLoader.setSource(useGlassHost ? "hosts/GlassHost.qml" : "hosts/StockHost.qml",
+                                            { softly: root, anchorItem: button, bar: root.bar })
+  Loader { id: hostLoader }
+  Item { id: parking; visible: false; width: Style.space(340); height: Style.space(700) }
 
     PanelKeyCatcher {
       id: keyboard
+      parent: root.popup ? root.popup.slot : parking
       anchors.fill: parent
       blocked: wordField.activeFocus
       onCloseRequested: root.close()
@@ -208,6 +227,57 @@ Panel {
           }
         }
 
+        // ---------- Set up: three writes, each with consent and a backup ----------
+        Column {
+          visible: root.loaded && root.setup && (!root.setup.complete || (root.setup.hotkey && root.setup.hotkey !== root.hotkey))
+          width: parent.width
+          spacing: Style.space(8)
+          Text {
+            text: root.setUp ? "NEW KEY" : "SET UP"
+            color: root.fg; opacity: 0.6
+            font.family: root.family; font.pixelSize: Style.font.caption; font.weight: Font.DemiBold
+          }
+          Text {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: root.setUp
+              ? "The dictation key in Softly's settings is " + root.hotkey + ", but Hyprland is set up for " + root.setup.hotkey + "."
+              : "Softly writes three things on this machine, each backed up first: the paste helper to ~/.local/bin, Voxtype's output settings (clipboard through that helper, its own overlay off), and ~/.config/hypr/softly.lua for the " + root.hotkey + " key, loaded by one marked line at the end of hyprland.lua. Remove it any time from this panel."
+            color: root.fg; opacity: 0.7
+            font.family: root.family; font.pixelSize: Style.font.caption
+          }
+          Column {
+            visible: !root.setUp
+            spacing: Style.space(2)
+            Repeater {
+              model: [["paste", "Paste helper"], ["voxtype", "Voxtype output"], ["hypr", "Hyprland key"]]
+              delegate: Text {
+                required property var modelData
+                text: (root.setup && root.setup[modelData[0]] ? "󰄬  " : "○  ") + modelData[1]
+                color: root.fg; opacity: root.setup && root.setup[modelData[0]] ? 0.9 : 0.55
+                font.family: root.family; font.pixelSize: Style.font.caption
+              }
+            }
+          }
+          Text {
+            visible: root.setup && !root.setup.voxtypeInstalled
+            width: parent.width; wrapMode: Text.WordWrap
+            text: "Voxtype is not installed. Run: omarchy pkg add voxtype"
+            color: root.fg; opacity: 0.8
+            font.family: root.family; font.pixelSize: Style.font.caption
+          }
+          Button {
+            text: root.setUp ? "Apply " + root.hotkey : "Set up Softly"
+            foreground: root.fg
+            fontFamily: root.family
+            bordered: true
+            active: true
+            enabled: !root.busy && root.setup && root.setup.voxtypeInstalled
+            onClicked: root.runSetup()
+          }
+        }
+        PanelSeparator { visible: root.loaded && root.setup && !root.setup.complete; foreground: root.fg }
+
         SwitchRow {
           width: parent.width
           title: "Play sounds"
@@ -218,7 +288,7 @@ Panel {
           onHoveredIn: root.cursor = 0
         }
 
-        Motion.GlassSeparator { foreground: root.fg }
+        PanelSeparator { foreground: root.fg }
 
         // ---------- Recent dictations (runtime only; gone at logout) ----------
         Column {
@@ -306,7 +376,7 @@ Panel {
           }
         }
 
-        Motion.GlassSeparator { foreground: root.fg }
+        PanelSeparator { foreground: root.fg }
 
         // ---------- Vocabulary ----------
         Column {
@@ -401,7 +471,7 @@ Panel {
           font.pixelSize: Style.font.caption
         }
 
-        Motion.GlassSeparator { foreground: root.fg }
+        PanelSeparator { foreground: root.fg }
 
         // ---------- Footer: preview and model ----------
         Button {
@@ -446,6 +516,15 @@ Panel {
           }
         }
         Text {
+          visible: root.setUp
+          text: "Remove Softly's setup from this machine"
+          color: root.fg
+          opacity: removeMouse.containsMouse ? 0.9 : 0.45
+          font.family: root.family
+          font.pixelSize: Style.font.caption
+          MouseArea { id: removeMouse; anchors.fill: parent; anchors.margins: -Style.space(4); hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.removeSetup() }
+        }
+        Text {
           visible: root.message.length > 0
           width: parent.width
           wrapMode: Text.WordWrap
@@ -457,7 +536,6 @@ Panel {
         }
       }
     }
-  }
 
   component Switch: Rectangle {
     id: sw

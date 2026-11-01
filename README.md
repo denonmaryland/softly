@@ -51,7 +51,7 @@ Resources/                   Info.plist, open/close sound cues
 scripts/build-app.sh         Builds and signs "Softly.app"
 scripts/fetch-model.sh       Downloads and verifies the Whisper model
 docs/ui-spec.md              Window and pill spec from the Paper design (direction 01)
-Linux/                       The Omarchy plugin (denon.softly), paste helper, deploy.sh
+Linux/                       The Omarchy plugin (io.github.denonmaryland.softly), paste helper, deploy.sh
 VERSION, scripts/release.sh  One version for all platforms; release.sh tags and pushes
 .github/workflows/release.yml Builds and publishes all three on a v* tag
 .github/workflows/build.yml  Optional macOS CI build (only if pushed to GitHub)

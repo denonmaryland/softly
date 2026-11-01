@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Installs the Omarchy plugin and the paste helper from this repo onto this
-# machine, then restarts the shell (QML hot-reload keeps stale components).
+# Installs the Omarchy plugin from this repo onto this machine and restarts
+# the shell (QML hot-reload keeps stale components). The plugin's own
+# "Set up" (panel, or helpers/control.py setup <key>) handles Voxtype, the
+# paste helper and the Hyprland module.
 set -euo pipefail
 cd "$(dirname "$0")"
-rsync -a --delete --exclude '__pycache__' denon.softly/ "$HOME/.config/omarchy/plugins/denon.softly/"
-install -m 755 bin/voxtype-app-paste "$HOME/.local/bin/voxtype-app-paste"
+rsync -a --delete --exclude '__pycache__' plugin/ "$HOME/.config/omarchy/plugins/io.github.denonmaryland.softly/"
 omarchy restart shell
-echo "Softly plugin $(python3 -c 'import json;print(json.load(open("denon.softly/manifest.json"))["version"])') deployed"
+echo "Softly plugin $(python3 -c 'import json;print(json.load(open("plugin/manifest.json"))["version"])') deployed"

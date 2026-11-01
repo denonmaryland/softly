@@ -25,5 +25,5 @@ Recent dictations: the paste helper keeps the last five transcripts in
 so the popover can show them with a Copy button. "Clear" forgets them.
 
 The widget is placed on the bar by `bar.layout` in `~/.config/omarchy/shell.json`
-(`{"id": "denon.softly"}`); `omarchy bar put` reports success without
+(`{"id": "io.github.denonmaryland.softly"}`); `omarchy bar put` reports success without
 writing it when the plugin is already enrolled as a service.
