@@ -34,4 +34,5 @@ git push origin HEAD "v$v"
 split=$(git subtree split --prefix=Linux/plugin)
 git push --force https://github.com/denonmaryland/omarchy-softly.git "$split:main"
 git tag -f "plugin-v$v" "$split" && git push --force https://github.com/denonmaryland/omarchy-softly.git "plugin-v$v:refs/tags/v$v"
+gh release create "v$v" --repo denonmaryland/omarchy-softly --title "Softly $v" --notes "See CHANGELOG.md in the plugin."
 echo "Tagged v$v (apps) and pushed the plugin to omarchy-softly. Watch the release build: gh run watch"
