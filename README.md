@@ -1,8 +1,19 @@
-# Softly for macOS
+# Softly
 
-A menu-bar dictation app for the Mac, ported from the Linux Omarchy
-"Softly" setup. It uses the same local Whisper model and settings and
-draws the same backlit-groove pill with the same motion. Nothing leaves the Mac.
+Hold a key, speak, release. Local Whisper dictation with the same quiet
+backlit pill on macOS, Windows and Omarchy Linux. This README covers the
+Mac app; the Windows app is in `Windows/` and the Omarchy plugin in
+`Linux/plugin/` (published at github.com/denonmaryland/omarchy-softly).
+
+![Softly on Omarchy: hold F9, speak, and the words land in Obsidian](Linux/plugin/docs/demo-dictation.gif)
+
+![The pill follows the theme](Linux/plugin/docs/pill-themes.gif)
+
+## The Mac app
+
+A menu-bar dictation app for the Mac, ported from the Omarchy plugin. It
+uses the same local Whisper model and settings and draws the same
+backlit-groove pill with the same motion. Nothing leaves the Mac.
 
 Status: **running on the Mac.** Dictation, paste and the pill work. The
 window (Home, Vocabulary, Preferences) following the chosen "Quiet Native"

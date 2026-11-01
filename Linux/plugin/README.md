@@ -5,7 +5,7 @@ the Voxtype daemon Omarchy already ships, with a quiet backlit pill instead
 of Voxtype's overlay and a bar popover for the few settings that matter.
 Nothing leaves the machine.
 
-![Softly's popover on the bar](preview.png)
+![Hold F9 and speak: the pill appears, the words land in Obsidian; a double-tap dictates hands-free into another note; the popover shows what was just said](docs/demo-dictation.gif)
 
 ## What it does
 
@@ -21,6 +21,21 @@ Nothing leaves the machine.
   the last few transcripts with copy buttons, your vocabulary (names Whisper
   gets wrong, saved to Voxtype's prompt), status, and a preview of the pill.
 - **Keyboard**: Up/Down move between rows, Enter activates.
+
+## It follows your theme
+
+The pill takes its colours from the Omarchy theme: the capsule, the backlit
+groove and the bars shift with every `omarchy theme set`.
+
+![The pill under Gallery City 783, Catppuccin Latte, Synthwave 84 and Tokyo Night](docs/pill-themes.gif)
+
+![Five themes, one pill](docs/pill-strip.png)
+
+Switching themes while dictating, with the popover in between:
+
+![Catppuccin Latte, Synthwave 84 and Tokyo Night, with a dictation under each](docs/demo-themes.gif)
+
+![The popover: sounds, recent transcripts, vocabulary, status](preview.png)
 
 ## Install
 
