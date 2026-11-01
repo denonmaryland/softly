@@ -262,7 +262,7 @@ Panel {
           Text {
             visible: root.setup && !root.setup.voxtypeInstalled
             width: parent.width; wrapMode: Text.WordWrap
-            text: "Voxtype is not installed. Run: omarchy pkg add voxtype"
+            text: "Voxtype is not installed. It ships with Omarchy; install it first, then set up Softly."
             color: root.fg; opacity: 0.8
             font.family: root.family; font.pixelSize: Style.font.caption
           }

@@ -231,7 +231,7 @@ def setup(hotkey):
     if not HOTKEY_RE.match(hotkey):
         return ["Not a usable key name: " + hotkey]
     if shutil.which("voxtype") is None:
-        return ["Voxtype is not installed. Run: omarchy pkg add voxtype"]
+        return ["Voxtype is not installed. It ships with Omarchy; install it first."]
     if run(["hyprctl", "version"])[0] != 0:
         return ["Hyprland is not running"]
     errors = []

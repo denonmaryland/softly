@@ -58,8 +58,10 @@ Your vocabulary stays in Voxtype's config; sounds setting lives in
 ## Dependencies
 
 All part of a stock Omarchy install: **Voxtype** (the dictation daemon and
-its Whisper model; `omarchy pkg add voxtype` if missing), `wl-clipboard`,
-`jq`, `hyprctl`, `python3`. No sudo or pkexec is required. The plugin talks
+its Whisper model; the plugin never installs it, only checks that it is
+there), `wl-clipboard`, `jq`, `hyprctl`, `python3`. The only service it
+touches is your own user-level `voxtype` service, restarted after a
+vocabulary change or Set up. No sudo or pkexec is required. The plugin talks
 to the network only when you press **Check for updates**, which reads the
 latest release tag on GitHub; updates install through `omarchy plugin update`.
 
