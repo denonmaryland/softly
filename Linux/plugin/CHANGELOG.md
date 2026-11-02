@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.10
+
+- Dictation pastes into Herdr. Herdr's terminal panes ignored the Ctrl+V
+  Softly sent (Codex read it as "paste an image"); Herdr now gets its own
+  Ctrl+Shift+V. After updating, press Set up Softly in the popover once so
+  the new paste helper is installed.
+
 ## 0.2.9
 
 - No changes to the plugin; this version keeps it in step with the Mac and
