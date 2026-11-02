@@ -58,6 +58,12 @@ enum Settings {
     }
 
     /// The pill's style, an id from PillTheme.all.
+    /// Virtual key code of the dictation key; Right Option by default.
+    static var hotkeyCode: Int64 {
+        get { (UserDefaults.standard.object(forKey: "hotkeyCode") as? NSNumber)?.int64Value ?? 61 }
+        set { UserDefaults.standard.set(NSNumber(value: newValue), forKey: "hotkeyCode") }
+    }
+
     static var pillTheme: String {
         get { UserDefaults.standard.string(forKey: "pillTheme") ?? "system" }
         set { UserDefaults.standard.set(newValue, forKey: "pillTheme") }

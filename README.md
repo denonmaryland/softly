@@ -21,7 +21,7 @@ Local Whisper dictation with the same quiet backlit pill on macOS, Windows and O
 
 <table align="center">
 <tr>
-<td align="center" width="33%"><h3>Tap</h3>Right Option on the Mac, Right Alt on Windows, F9 on Omarchy. The pill rises with a live waveform and a timer.</td>
+<td align="center" width="33%"><h3>Tap</h3>Right Option on the Mac, Right Alt on Windows, F9 on Omarchy, or any key you pick in settings. The pill rises with a live waveform and a timer.</td>
 <td align="center" width="33%"><h3>Speak</h3>Tap once and Softly keeps listening hands-free until you tap again, or hold the key to talk. Esc or the × cancels.</td>
 <td align="center" width="33%"><h3>Release</h3>Whisper runs on the machine, the groove dims while it works, and the text is pasted into the app you were in. It stays on the clipboard too.</td>
 </tr>
@@ -78,6 +78,8 @@ A menu-bar dictation app for the Mac, ported from the Omarchy plugin. It uses th
 ### How it works
 
 - **Tap** Right Option (⌥) once to dictate hands-free; tap it again to transcribe and paste.
+  Preferences → Dictation shortcut → Change picks another key: Right Command,
+  Right Control or a function key.
 - Or hold it while you talk and release to finish.
 - **Esc**, or clicking the **×** that appears when you hover the timer,
   cancels and discards. Esc is only intercepted while the pill is showing.
@@ -178,7 +180,7 @@ For local development you can instead sign with a certificate of your own:
 
 - Vocabulary: the window's Vocabulary view (stored in UserDefaults; first-run
   defaults in `Settings.defaultVocabulary`). Language, threads: `Settings.swift`.
-- Hotkey: `HotkeyMonitor.swift` (`triggerKeyCode`, `rightOptionMask`).
+- Hotkey: Preferences → Dictation shortcut; the usable keys are listed in `Hotkey.swift`.
 - Pill colours: `Palette.swift`. Motion timings: `PillModel.swift`.
 
 ### Known limitations
@@ -187,8 +189,8 @@ For local development you can instead sign with a certificate of your own:
   Dvorak) may need a layout-aware key code.
 - Bluetooth headsets switch to a lower-quality microphone profile while
   recording, which can reduce accuracy. The built-in microphone avoids this.
-- The Preferences window shows the shortcut and microphone but does not let
-  you change them yet; both follow the code and the system input device.
+- The Preferences window shows the microphone but does not let you change it
+  yet; it follows the system input device.
 - Recordings whose loudest moment stays under `Settings.silenceRMS` (0.005)
   are skipped, because Whisper invents text for silence. If soft speech is
   being dropped, lower it.

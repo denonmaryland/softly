@@ -22,6 +22,13 @@ final class AppState: ObservableObject {
     @Published var tapToStart = Settings.tapToStart {
         didSet { Settings.tapToStart = tapToStart }
     }
+    @Published var hotkey = Hotkey.current {
+        didSet { Settings.hotkeyCode = hotkey.keyCode; applyHotkey(hotkey) }
+    }
+    /// Waiting for the user to press the new dictation key.
+    @Published var capturingHotkey = false
+    /// Shown under the shortcut row after an unusable key.
+    @Published var hotkeyNote: String?
     @Published var pillTheme = Settings.pillTheme {
         didSet { Settings.pillTheme = pillTheme }
     }
@@ -37,6 +44,9 @@ final class AppState: ObservableObject {
     var downloadModel: () -> Void = {}
     var cancelDownload: () -> Void = {}
     var previewPill: () -> Void = {}
+    var applyHotkey: (Hotkey) -> Void = { _ in }
+    var captureHotkey: () -> Void = {}
+    var cancelCapture: () -> Void = {}
     var checkForUpdates: () -> Void = {}
     var installUpdate: () -> Void = {}
     /// Asks the delegate to re-read engine and hotkey state into this object.
@@ -73,7 +83,7 @@ final class AppState: ObservableObject {
         case .ready:
             if !hotkeysRunning { return "Waiting for keyboard permissions" }
             if !microphoneGranted { return "Waiting for microphone permission" }
-            return "Ready: hold Right ⌥ to dictate"
+            return "Ready: \(tapToStart ? "tap" : "hold") \(hotkey.label) to dictate"
         }
     }
 }

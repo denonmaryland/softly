@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.8
+
+- Pick your dictation key in the popover: Dictation key → Change offers F9,
+  Right Alt, Right Ctrl, Right Super, F8, F10, F11 and F12. Switching
+  rewrites Softly's Hyprland binding straight away. The Mac and Windows
+  apps get a Change button that records the next key you press.
+
 ## 0.2.7
 
 - A lone modifier works as the dictation key: set the hotkey to Alt_R

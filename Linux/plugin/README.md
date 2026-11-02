@@ -21,7 +21,7 @@ Tap a key, speak, tap again, and the words land where your cursor is. Nothing le
 
 <table align="center">
 <tr>
-<td align="center" width="33%"><h3>Tap</h3>Tap <kbd>F9</kbd>. The pill rises from the bottom of the screen with a live waveform and a timer.</td>
+<td align="center" width="33%"><h3>Tap</h3>Tap <kbd>F9</kbd>, or the key you pick under Dictation key in the popover. The pill rises from the bottom of the screen with a live waveform and a timer.</td>
 <td align="center" width="33%"><h3>Speak</h3>Say it however it comes. One tap and Softly keeps listening hands-free until you tap again; hold the key instead for push-to-talk.</td>
 <td align="center" width="33%"><h3>Release</h3>Whisper runs on this machine, the groove dims while it works, and the text is pasted into the app you were in.</td>
 </tr>

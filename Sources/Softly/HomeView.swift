@@ -57,7 +57,7 @@ struct HomeView: View {
 
     private var shortcutCard: some View {
         HStack(spacing: 26) {
-            Keycap(label: "Right ⌥")
+            Keycap(label: state.hotkey.label)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Hold to speak. Release to paste.")
                     .font(.system(size: 18, weight: .semibold))
@@ -87,7 +87,7 @@ struct HomeView: View {
                     .font(.system(size: 16))
                     .scrollContentBackground(.hidden)
                 if practice.isEmpty {
-                    Text("Click here, then hold Right Option and say something.")
+                    Text("Click here, then hold \(state.hotkey.name) and say something.")
                         .font(.system(size: 16))
                         .foregroundStyle(.tertiary)
                         .padding(.top, 1)

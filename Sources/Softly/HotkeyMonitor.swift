@@ -3,21 +3,27 @@ import CoreGraphics
 
 /// Global key handling through a Quartz event tap.
 ///
-/// Trigger: Right Option, alone (F9 is a media key on Mac keyboards).
-/// Esc is swallowed only while the pill is showing, so apps get it otherwise.
-/// Typing any key while Right Option is held (an Option shortcut or accented
-/// character) is reported as a chord so a stray recording can be discarded.
+/// Trigger: the chosen key alone, Right Option by default (F9 is a media key
+/// on Mac keyboards, so a function key is opt-in). Esc is swallowed only
+/// while the pill is showing, so apps get it otherwise. Typing any key while
+/// the trigger is held (an Option shortcut or accented character) is
+/// reported as a chord so a stray recording can be discarded.
 @MainActor
 final class HotkeyMonitor {
-    static let triggerKeyCode: Int64 = 61     // kVK_RightOption
     static let escapeKeyCode: Int64 = 53      // kVK_Escape
-    static let rightOptionMask: UInt64 = 0x40 // NX_DEVICERALTKEYMASK
 
+    enum Capture { case key(Hotkey), unsupported, cancelled }
+
+    var hotkey: Hotkey = .current {
+        didSet { triggerDown = false }
+    }
     var onPress: () -> Void = {}
     var onRelease: () -> Void = {}
     var onChord: () -> Void = {}
     /// Return true to swallow Esc.
     var onEscape: () -> Bool = { false }
+    /// While set, the next key pressed is handed here instead of dictating.
+    var onCapture: ((Capture) -> Void)?
 
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
@@ -30,6 +36,7 @@ final class HotkeyMonitor {
         if tap != nil { return true }
         let mask = (CGEventMask(1) << CGEventType.flagsChanged.rawValue)
             | (CGEventMask(1) << CGEventType.keyDown.rawValue)
+            | (CGEventMask(1) << CGEventType.keyUp.rawValue)
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
@@ -46,33 +53,69 @@ final class HotkeyMonitor {
         return true
     }
 
+    private func finishCapture(_ result: Capture) {
+        guard let capture = onCapture else { return }
+        onCapture = nil
+        DispatchQueue.main.async { capture(result) }
+    }
+
+    private func trigger(_ down: Bool) {
+        guard down != triggerDown else { return }
+        triggerDown = down
+        let action = down ? onPress : onRelease
+        DispatchQueue.main.async { action() }
+    }
+
     /// Returns true to swallow the event. Press/release/chord are deferred so
     /// starting the microphone never stalls system-wide typing in the tap.
     fileprivate func handle(type: CGEventType, event: CGEvent) -> Bool {
+        let code = event.getIntegerValueField(.keyboardEventKeycode)
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
         case .flagsChanged:
-            guard event.getIntegerValueField(.keyboardEventKeycode) == Self.triggerKeyCode else { break }
-            let down = event.flags.rawValue & Self.rightOptionMask != 0
-            guard down != triggerDown else { break }
-            triggerDown = down
-            let action = down ? onPress : onRelease
-            DispatchQueue.main.async { action() }
+            if onCapture != nil {
+                if let key = Hotkey.with(keyCode: code), let mask = key.deviceMask {
+                    if event.flags.rawValue & mask != 0 { finishCapture(.key(key)) }
+                } else if Self.otherModifiers.contains(code) {
+                    finishCapture(.unsupported)
+                }
+                break
+            }
+            guard let mask = hotkey.deviceMask, code == hotkey.keyCode else { break }
+            trigger(event.flags.rawValue & mask != 0)
         case .keyDown:
+            if onCapture != nil {
+                if code == Self.escapeKeyCode { finishCapture(.cancelled) }
+                else if let key = Hotkey.with(keyCode: code), !key.isModifier { finishCapture(.key(key)) }
+                else { finishCapture(.unsupported) }
+                return true
+            }
             // Esc stays synchronous: it decides whether the key is swallowed.
-            if event.getIntegerValueField(.keyboardEventKeycode) == Self.escapeKeyCode, onEscape() {
+            if code == Self.escapeKeyCode, onEscape() {
+                return true
+            }
+            if !hotkey.isModifier && code == hotkey.keyCode {
+                if event.getIntegerValueField(.keyboardEventAutorepeat) == 0 { trigger(true) }
                 return true
             }
             if triggerDown {
                 let chord = onChord
                 DispatchQueue.main.async { chord() }
             }
+        case .keyUp:
+            if !hotkey.isModifier && code == hotkey.keyCode {
+                trigger(false)
+                return true
+            }
         default:
             break
         }
         return false
     }
+
+    /// Shift, Caps Lock, Fn and the left-hand modifiers: not usable alone.
+    private static let otherModifiers: Set<Int64> = [55, 56, 57, 58, 59, 60, 63]
 }
 
 /// The tap is installed on the main run loop, so callbacks arrive on the main thread.

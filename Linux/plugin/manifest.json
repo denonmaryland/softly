@@ -27,7 +27,7 @@
         "key": "hotkey",
         "type": "string",
         "label": "Dictation key",
-        "description": "Hyprland key name such as F9, Alt_R (Right Alt) or SUPER + H. Applied by Set up in the panel; F9 replaces Omarchy's stock Voxtype binding.",
+        "description": "Hyprland key name such as F9, Alt_R (Right Alt) or SUPER + H. Pick one under Dictation key in the panel; F9 replaces Omarchy's stock Voxtype binding.",
         "defaultValue": "F9"
       }
     ]

@@ -25,6 +25,8 @@ public partial class MainWindow : Window
         {
             // Closing hides; the tray keeps the app alive.
             e.Cancel = true;
+            // A capture left running would quietly take the next key pressed elsewhere.
+            if (state.CapturingHotkey) state.CancelCapture();
             Hide();
         };
         BuildThemeSwatches();
@@ -41,7 +43,14 @@ public partial class MainWindow : Window
         StatusText.Text = ready ? "Ready to dictate" : state.StatusLine;
         SoundsSwitch.IsChecked = state.SoundsEnabled;
         TapSwitch.IsChecked = state.TapToStart;
-        ShortcutSub.Text = state.TapToStart ? "Tap to start and stop · or hold to talk" : "Hold to talk · let go to finish";
+        ShortcutSub.Text = state.CapturingHotkey ? "Press " + Hotkey.Choices + " · Esc keeps the current one"
+            : state.HotkeyNote.Length > 0 ? state.HotkeyNote
+            : state.TapToStart ? "Tap to start and stop · or hold to talk" : "Hold to talk · let go to finish";
+        ShortcutKey.Text = HomeKey.Text = state.Hotkey.Name;
+        ShortcutCap.Visibility = state.CapturingHotkey ? Visibility.Collapsed : Visibility.Visible;
+        ShortcutWaiting.Visibility = state.CapturingHotkey ? Visibility.Visible : Visibility.Collapsed;
+        ShortcutChange.Content = state.CapturingHotkey ? "Cancel" : "Change";
+        PracticeHint.Text = "Click here, then hold " + state.Hotkey.Name + " and say something.";
         HomeGestureText.Text = state.TapToStart ? "Tap to start, tap again to finish. Or hold to talk." : "Hold the key while you talk, then let go.";
         MediaSwitch.IsChecked = state.PauseMedia;
         ModelText.Text = state.ModelText;
@@ -53,7 +62,7 @@ public partial class MainWindow : Window
         HomeModelAction.Content = modelAction;
         ModelNote.Text = state.DownloadError;
         ModelNote.Visibility = state.DownloadPhase == ModelDownloader.Phase.Failed && state.DownloadError.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
-        HookText.Text = state.HotkeyRunning ? "✓ Right Alt is reserved for Softly while it runs" : "○ The keyboard hook could not start; restart Softly";
+        HookText.Text = state.HotkeyRunning ? "✓ " + state.Hotkey.Name + " is reserved for Softly while it runs" : "○ The keyboard hook could not start; restart Softly";
         HookText.Foreground = state.HotkeyRunning ? Green : Muted;
         foreach (var (id, ring, label) in themeSwatches)
         {
@@ -137,6 +146,11 @@ public partial class MainWindow : Window
     private void MediaChanged(object sender, RoutedEventArgs e) => state.PauseMedia = MediaSwitch.IsChecked == true;
 
     private void PreviewClick(object sender, RoutedEventArgs e) => state.PreviewPill();
+
+    private void ChangeShortcut(object sender, RoutedEventArgs e)
+    {
+        if (state.CapturingHotkey) state.CancelCapture(); else state.CaptureHotkey();
+    }
 
     private readonly List<(string id, Border ring, TextBlock label)> themeSwatches = new();
 

@@ -191,7 +191,7 @@
             <TextBlock Text="Speak into the app you’re using. Softly takes it from here." FontSize="15" Foreground="{StaticResource Muted}" Margin="0,14,0,0"/>
             <Border Background="{StaticResource CardFill}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" CornerRadius="12" Padding="24" Margin="0,50,0,0">
               <StackPanel Orientation="Horizontal">
-                <Border Style="{StaticResource Keycap}"><TextBlock Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
+                <Border Style="{StaticResource Keycap}"><TextBlock x:Name="HomeKey" Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
                 <StackPanel Margin="26,0,0,0" VerticalAlignment="Center">
                   <TextBlock Text="Hold to speak. Release to paste." FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
                   <TextBlock x:Name="HomeGestureText" Text="Tap to start, tap again to finish. Or hold to talk." FontSize="14" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
@@ -249,7 +249,11 @@
             <StackPanel Margin="0,26,0,0">
               <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
                 <DockPanel>
-                  <Border DockPanel.Dock="Right" Style="{StaticResource Keycap}"><TextBlock Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="ShortcutCap" Style="{StaticResource Keycap}"><TextBlock x:Name="ShortcutKey" Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
+                    <TextBlock x:Name="ShortcutWaiting" Text="Press a key…" FontSize="14" FontWeight="Medium" Foreground="{StaticResource Accent}" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    <Button x:Name="ShortcutChange" Style="{StaticResource LinkButton}" Content="Change" Click="ChangeShortcut" Margin="14,0,0,0" VerticalAlignment="Center"/>
+                  </StackPanel>
                   <StackPanel Margin="0,0,20,0"><TextBlock Text="Dictation shortcut" Style="{StaticResource RowTitle}"/><TextBlock x:Name="ShortcutSub" Text="Tap to start and stop · or hold to talk" Style="{StaticResource RowSub}"/></StackPanel>
                 </DockPanel>
               </Border>

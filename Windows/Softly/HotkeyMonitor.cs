@@ -6,16 +6,17 @@ namespace Softly;
 /// <summary>
 /// Global key handling through a low-level keyboard hook.
 ///
-/// Trigger: Right Alt, alone. It is swallowed entirely so apps never see a
-/// bare Alt press (which would otherwise focus their menu bar). Esc is
-/// swallowed only while the pill is showing. Any other key pressed while
-/// Right Alt is held is reported as a chord so a stray recording is discarded.
+/// Trigger: the chosen key alone, Right Alt by default. It is swallowed
+/// entirely so apps never see it (a bare Alt press would otherwise focus
+/// their menu bar). Esc is swallowed only while the pill is showing. Any
+/// other key pressed while the trigger is held is reported as a chord so a
+/// stray recording is discarded.
 /// </summary>
 public sealed class HotkeyMonitor : IDisposable
 {
     private const int WH_KEYBOARD_LL = 13;
     private const int WM_KEYDOWN = 0x0100, WM_KEYUP = 0x0101, WM_SYSKEYDOWN = 0x0104, WM_SYSKEYUP = 0x0105;
-    private const uint VK_RMENU = 0xA5, VK_ESCAPE = 0x1B;
+    private const uint VK_ESCAPE = 0x1B;
     private const uint LLKHF_INJECTED = 0x10;
 
     public Action OnPress = () => { };
@@ -23,6 +24,21 @@ public sealed class HotkeyMonitor : IDisposable
     public Action OnChord = () => { };
     /// <summary>Return true to swallow Esc.</summary>
     public Func<bool> OnEscape = () => false;
+
+    private volatile uint triggerVk = Hotkey.RightAlt.Vk;
+    /// <summary>The dictation key's virtual-key code.</summary>
+    public uint TriggerVk
+    {
+        get => triggerVk;
+        set { triggerVk = value; triggerDown = false; }
+    }
+
+    /// <summary>
+    /// While set, the next key pressed is swallowed and handed here (on the UI
+    /// thread) instead of dictating; Esc arrives as VK_ESCAPE.
+    /// </summary>
+    public volatile Action<uint>? OnCapture;
+    private volatile uint capturedVk;
 
     private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
     private readonly LowLevelKeyboardProc callback; // kept alive for the hook's lifetime
@@ -99,7 +115,20 @@ public sealed class HotkeyMonitor : IDisposable
         bool up = msg == WM_KEYUP || msg == WM_SYSKEYUP;
         bool injected = (k.flags & LLKHF_INJECTED) != 0 || k.dwExtraInfo == Paster.InjectedMarker;
 
-        if (k.vkCode == VK_RMENU && !injected)
+        if (!injected && OnCapture is { } capture && down)
+        {
+            OnCapture = null;
+            uint vk = k.vkCode;
+            capturedVk = vk;
+            dispatcher.BeginInvoke(() => capture(vk));
+            return (IntPtr)1;
+        }
+        if (!injected && up && capturedVk != 0 && k.vkCode == capturedVk)
+        {
+            capturedVk = 0;
+            return (IntPtr)1;
+        }
+        if (k.vkCode == triggerVk && !injected)
         {
             if (down && !triggerDown)
             {

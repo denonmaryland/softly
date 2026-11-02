@@ -285,6 +285,31 @@ def setup(hotkey):
     return []
 
 
+def set_hotkey(hotkey):
+    """Saves the key in the widget's settings and, once Softly is set up,
+    rewrites its Hyprland module for it. Voxtype is left alone."""
+    hotkey = hotkey.strip()
+    if not HOTKEY_RE.match(hotkey):
+        return ["Not a usable key name: " + hotkey]
+    code, out, err = run(["omarchy", "bar", "set", ID, "hotkey", hotkey], timeout=15)
+    if code != 0:
+        return ["Could not save the key: " + (err or out).strip()]
+    if not (MARK in read_text(HYPRLAND) and os.path.exists(MODULE)):
+        return []  # applied by Set up later
+    old = read_text(MODULE)
+    try:
+        atomic_write(MODULE, render_module(hotkey))
+    except OSError as e:
+        return ["Could not write the Hyprland module: " + str(e)]
+    run(["hyprctl", "reload"])
+    problems = [l for l in hypr_errors() if "softly" in l.lower()]
+    if problems:
+        atomic_write(MODULE, old)
+        run(["hyprctl", "reload"])
+        return ["Hyprland rejected that key: " + problems[0]]
+    return []
+
+
 def without_loader(text):
     return "".join(l for l in text.splitlines(True) if MARK not in l)
 
@@ -435,6 +460,8 @@ def main(argv):
         errors = update()
     elif cmd == "setup" and len(argv) == 3:
         errors = setup(argv[2])
+    elif cmd == "hotkey" and len(argv) == 3:
+        errors = set_hotkey(argv[2])
     elif cmd == "teardown":
         errors = teardown()
     elif cmd != "state":

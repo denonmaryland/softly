@@ -18,6 +18,9 @@ public sealed class AppState : INotifyPropertyChanged
     private bool pauseMedia = Settings.PauseMedia;
     private string pillTheme = Settings.PillTheme;
     private bool tapToStart = Settings.TapToStart;
+    private Hotkey hotkey = Hotkey.Current;
+    private bool capturingHotkey;
+    private string hotkeyNote = "";
     private List<string> vocabulary = Settings.Vocabulary;
     private Updater.Phase updatePhase = Updater.Phase.Idle;
     private string updateVersion = "", updateError = "";
@@ -47,6 +50,19 @@ public sealed class AppState : INotifyPropertyChanged
         set { if (Set(ref tapToStart, value)) Settings.TapToStart = value; }
     }
 
+    /// <summary>The dictation key; saving it also re-points the keyboard hook.</summary>
+    public Hotkey Hotkey
+    {
+        get => hotkey;
+        set { if (Set(ref hotkey, value, nameof(StatusLine))) { Settings.HotkeyVk = value.Vk; ApplyHotkey(value); } }
+    }
+
+    /// <summary>Waiting for the user to press the new dictation key.</summary>
+    public bool CapturingHotkey { get => capturingHotkey; set => Set(ref capturingHotkey, value); }
+
+    /// <summary>Shown under the shortcut row after an unusable key.</summary>
+    public string HotkeyNote { get => hotkeyNote; set => Set(ref hotkeyNote, value); }
+
     public string PillTheme
     {
         get => pillTheme;
@@ -72,6 +88,9 @@ public sealed class AppState : INotifyPropertyChanged
     public Action DownloadModel = () => { };
     public Action CancelDownload = () => { };
     public Action PreviewPill = () => { };
+    public Action<Hotkey> ApplyHotkey = _ => { };
+    public Action CaptureHotkey = () => { };
+    public Action CancelCapture = () => { };
     public Action CheckForUpdates = () => { };
     public Action InstallUpdate = () => { };
 
@@ -99,7 +118,7 @@ public sealed class AppState : INotifyPropertyChanged
             _ => "Speech model not downloaded yet",
         },
         Transcriber.Status.Failed => "Model failed to load",
-        _ => hotkeyRunning ? "Ready: hold Right Alt to dictate" : "Keyboard hook could not start",
+        _ => hotkeyRunning ? "Ready: hold " + hotkey.Name + " to dictate" : "Keyboard hook could not start",
     };
 
     public string ModelText => modelStatus switch

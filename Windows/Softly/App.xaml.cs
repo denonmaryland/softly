@@ -62,6 +62,10 @@ public partial class App : Application
                 return true;
             },
         };
+        hotkeys.TriggerVk = state.Hotkey.Vk;
+        state.ApplyHotkey = key => hotkeys.TriggerVk = key.Vk;
+        state.CaptureHotkey = CaptureHotkey;
+        state.CancelCapture = () => { hotkeys.OnCapture = null; state.CapturingHotkey = false; };
         engine.PressTicks = () => hotkeys.PressTicks;
         engine.OnStatusChange = Refresh;
         state.ShowModelFolder = ShowModelFolder;
@@ -133,6 +137,25 @@ public partial class App : Application
     /// The download is a plain folder, so put Softly in the Start menu (and
     /// Start search) the first time it runs, pointing at wherever it lives.
     /// </summary>
+    /// <summary>The next key pressed anywhere becomes the dictation key, if it can be one.</summary>
+    private void CaptureHotkey()
+    {
+        if (hotkeys is null || !hotkeys.IsRunning)
+        {
+            state.HotkeyNote = "The keyboard hook isn't running; restart Softly, then pick a key.";
+            return;
+        }
+        state.HotkeyNote = "";
+        state.CapturingHotkey = true;
+        hotkeys.OnCapture = vk =>
+        {
+            state.CapturingHotkey = false;
+            if (vk == 0x1B) return; // Esc: keep the current key
+            if (Hotkey.WithVk(vk) is { } key) state.Hotkey = key;
+            else state.HotkeyNote = "That key can't be used. Try " + Hotkey.Choices + ".";
+        };
+    }
+
     private static void EnsureStartMenuShortcut()
     {
         try

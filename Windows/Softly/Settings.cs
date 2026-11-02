@@ -36,6 +36,7 @@ public static class Settings
         public bool PauseMedia { get; set; } = true;
         public string PillTheme { get; set; } = "system";
         public bool TapToStart { get; set; } = true;
+        public uint HotkeyVk { get; set; } = 0xA5;
         public List<string> Vocabulary { get; set; } = new(DefaultVocabulary);
     }
 
@@ -89,6 +90,13 @@ public static class Settings
     {
         get => Load().TapToStart;
         set { Load().TapToStart = value; Save(); }
+    }
+
+    /// <summary>Virtual-key code of the dictation key; Right Alt by default.</summary>
+    public static uint HotkeyVk
+    {
+        get => Load().HotkeyVk;
+        set { Load().HotkeyVk = value; Save(); }
     }
 
     /// <summary>The pill's style, an id from PillTheme.All.</summary>

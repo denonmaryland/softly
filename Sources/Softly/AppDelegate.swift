@@ -24,6 +24,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         hotkeys.onRelease = { [weak self] in self?.engine.release() }
         hotkeys.onChord = { [weak self] in self?.engine.chord() }
         hotkeys.onEscape = { [weak self] in self?.engine.escape() ?? false }
+        hotkeys.hotkey = state.hotkey
+        state.applyHotkey = { [weak self] key in self?.hotkeys.hotkey = key }
+        state.captureHotkey = { [weak self] in self?.captureHotkey() }
+        state.cancelCapture = { [weak self] in
+            self?.hotkeys.onCapture = nil
+            self?.state.capturingHotkey = false
+        }
 
         engine.onStatusChange = { [weak self] in self?.refresh() }
         state.poll = { [weak self] in self?.refresh() }
@@ -68,6 +75,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     // MARK: Hotkey permissions
+
+    /// The next key pressed anywhere becomes the dictation key, if it can be one.
+    private func captureHotkey() {
+        guard hotkeys.isRunning else {
+            state.hotkeyNote = "Grant Input Monitoring first, then pick a key."
+            return
+        }
+        state.hotkeyNote = nil
+        state.capturingHotkey = true
+        hotkeys.onCapture = { [weak self] result in
+            guard let self else { return }
+            self.state.capturingHotkey = false
+            switch result {
+            case .key(let key): self.state.hotkey = key
+            case .unsupported: self.state.hotkeyNote = "That key can't be used. Try \(Hotkey.choices)."
+            case .cancelled: break
+            }
+            self.refresh()
+        }
+    }
 
     private func startHotkeys() {
         if hotkeys.start() { return }

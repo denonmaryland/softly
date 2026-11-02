@@ -42,15 +42,22 @@ Panel {
   readonly property string hotkey: String(setting("hotkey", "F9") || "F9")
   // Hyprland key names read badly in sentences; name the common modifiers.
   readonly property string hotkeyLabel: ({ "Alt_R": "Right Alt", "Alt_L": "Left Alt", "Super_R": "Right Super", "Control_R": "Right Ctrl", "Shift_R": "Right Shift" })[hotkey] || hotkey
+  // Keys that work on their own; any other Hyprland key name can still be set
+  // with `omarchy bar set io.github.denonmaryland.softly hotkey <key>`.
+  readonly property var hotkeyChoices: [
+    { id: "F9", label: "F9" }, { id: "Alt_R", label: "Right Alt" }, { id: "Control_R", label: "Right Ctrl" }, { id: "Super_R", label: "Right Super" },
+    { id: "F8", label: "F8" }, { id: "F10", label: "F10" }, { id: "F11", label: "F11" }, { id: "F12", label: "F12" }
+  ]
+  property bool keysOpen: false
   readonly property bool setUp: !!(setup && setup.complete)
   property var update: null     // {current, latest, available, url} or {error}
   property bool checkingUpdate: false
   property string message: ""
   property var pending: []     // helper commands waiting their turn
   property string draft: ""
-  // Keyboard rows: 0 sounds · 1 tap to start · 2 pill style (Enter opens, left/right picks) · 3 add field · 4 preview · 5+ words.
+  // Keyboard rows: 0 sounds · 1 tap to start · 2 dictation key · 3 pill style (Enter opens, left/right picks) · 4 add field · 5 preview · 6+ words.
   property int cursor: 0
-  readonly property int wordRow0: 5
+  readonly property int wordRow0: 6
   readonly property int rowCount: wordRow0 + vocabulary.length
 
   readonly property bool busy: readProc.running || writeProc.running || pending.length > 0
@@ -81,6 +88,7 @@ Panel {
       else if (message.indexOf("Saving") === 0) message = "Saved · Voxtype restarted"
       else if (message.indexOf("Setting up") === 0) message = setup && setup.complete ? "Set up · hold " + hotkey + " to dictate" : "Setup did not finish"
       else if (message.indexOf("Removing") === 0) message = "Softly's setup was removed"
+      else if (message.indexOf("Switching") === 0) message = ""
     } catch (e) { message = "Could not read dictation settings." }
   }
   function send(args) { pending = pending.concat([args]); drain() }
@@ -108,6 +116,16 @@ Panel {
     send(["set", "theme", id])
     // Service.qml picks the file up live; show it on screen straight away.
     previewDelay.restart()
+  }
+  function setHotkey(id) {
+    if (id === hotkey) return
+    message = setUp ? "Switching to " + (({ "Alt_R": "Right Alt", "Super_R": "Right Super", "Control_R": "Right Ctrl" })[id] || id) + "…" : ""
+    send(["hotkey", id])
+  }
+  function stepHotkey(dx) {
+    let i = 0
+    for (let k = 0; k < hotkeyChoices.length; k++) if (hotkeyChoices[k].id === hotkey) i = k
+    setHotkey(hotkeyChoices[(i + dx + hotkeyChoices.length) % hotkeyChoices.length].id)
   }
   function stepTheme(dx) {
     let i = 0
@@ -146,16 +164,17 @@ Panel {
   function activate() {
     if (cursor === 0) setSounds(!sounds)
     else if (cursor === 1) setTap(!tapToStart)
-    else if (cursor === 2) stylesOpen = !stylesOpen
-    else if (cursor === 3) wordField.forceActiveFocus()
-    else if (cursor === 4) preview()
+    else if (cursor === 2) keysOpen = !keysOpen
+    else if (cursor === 3) stylesOpen = !stylesOpen
+    else if (cursor === 4) wordField.forceActiveFocus()
+    else if (cursor === 5) preview()
     else if (cursor - wordRow0 < vocabulary.length) removeWord(vocabulary[cursor - wordRow0])
   }
   onRowCountChanged: if (cursor >= rowCount) cursor = Math.max(0, rowCount - 1)
   Component.onCompleted: refresh()
   onOpenedChanged: {
     if (opened) { message = ""; refresh(); poll.restart() }
-    else { poll.stop(); stylesOpen = false; keyboard.forceActiveFocus() }
+    else { poll.stop(); stylesOpen = false; keysOpen = false; keyboard.forceActiveFocus() }
   }
 
   // Daemon state changes outside this panel; keep the status line honest while it is open.
@@ -167,7 +186,7 @@ Panel {
     function close(): void { root.close() }
     function toggle(): void { root.toggle() }
     function state(): string {
-      return JSON.stringify({loaded: root.loaded, sounds: root.sounds, tapToStart: root.tapToStart, pillTheme: root.pillTheme, vocabulary: root.vocabulary,
+      return JSON.stringify({loaded: root.loaded, hotkey: root.hotkey, keysOpen: root.keysOpen, sounds: root.sounds, tapToStart: root.tapToStart, pillTheme: root.pillTheme, vocabulary: root.vocabulary,
                              service: root.service, daemon: root.daemon, model: root.model, message: root.message})
     }
   }
@@ -223,7 +242,8 @@ Panel {
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onMoveRequested: function(dx, dy) {
         if (dy) root.cursor = Math.max(0, Math.min(root.rowCount - 1, root.cursor + dy))
-        else if (dx && root.cursor === 2 && root.stylesOpen) root.stepTheme(dx)
+        else if (dx && root.cursor === 3 && root.stylesOpen) root.stepTheme(dx)
+        else if (dx && root.cursor === 2 && root.keysOpen) root.stepHotkey(dx)
       }
       onActivateRequested: root.activate()
 
@@ -333,6 +353,78 @@ Panel {
           onHoveredIn: root.cursor = 1
         }
 
+        // ---------- Dictation key: a short list that works on its own ----------
+        Column {
+          width: parent.width
+          spacing: Style.space(8)
+          Item {
+            width: parent.width
+            height: keyText.implicitHeight
+            Column {
+              id: keyText
+              width: parent.width - keyLink.implicitWidth - Style.space(12)
+              spacing: Style.space(2)
+              Text { text: "Dictation key"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body; font.weight: root.cursor === 2 ? Font.DemiBold : Font.Normal }
+              Text {
+                width: parent.width; wrapMode: Text.WordWrap
+                text: root.hotkeyLabel + (root.setUp || !root.setup ? (root.tapToStart ? " · tap or hold it" : " · hold it while you talk") : " · applied when you set up Softly")
+                color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
+              }
+            }
+            Text {
+              id: keyLink
+              anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+              text: root.keysOpen ? "Done" : "Change"
+              color: root.fg
+              opacity: keyMouse.containsMouse || root.cursor === 2 ? 0.9 : 0.5
+              font.family: root.family; font.pixelSize: Style.font.caption
+              MouseArea {
+                id: keyMouse
+                anchors.fill: parent; anchors.margins: -Style.space(4)
+                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                enabled: root.loaded
+                onEntered: root.cursor = 2
+                onClicked: root.keysOpen = !root.keysOpen
+              }
+            }
+          }
+          Flow {
+            id: keyChips
+            visible: root.keysOpen
+            width: parent.width
+            spacing: Style.space(6)
+            readonly property real cell: Math.floor((width - 3 * spacing) / 4)
+            Repeater {
+              model: root.hotkeyChoices
+              delegate: Rectangle {
+                id: chip
+                required property var modelData
+                readonly property bool selected: modelData.id === root.hotkey
+                width: keyChips.cell; height: Style.space(28); radius: Style.space(8)
+                color: root.alphaOf(root.fg, chipMouse.containsMouse ? 0.1 : 0.05)
+                border.width: selected ? 2 : 1
+                border.color: selected ? root.accent : root.alphaOf(root.fg, 0.14)
+                Text {
+                  anchors.centerIn: parent
+                  text: chip.modelData.label
+                  color: root.fg
+                  opacity: chip.selected ? 1 : 0.75
+                  font.family: root.family; font.pixelSize: Style.font.caption
+                  font.weight: chip.selected ? Font.DemiBold : Font.Normal
+                }
+                MouseArea {
+                  id: chipMouse
+                  anchors.fill: parent
+                  hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                  enabled: !root.busy
+                  onEntered: root.cursor = 2
+                  onClicked: root.setHotkey(chip.modelData.id)
+                }
+              }
+            }
+          }
+        }
+
         // ---------- Pill style: Omarchy's theme or a fixed look ----------
         Column {
           width: parent.width
@@ -344,7 +436,7 @@ Panel {
               id: styleText
               width: parent.width - styleLink.implicitWidth - Style.space(12)
               spacing: Style.space(2)
-              Text { text: "Pill style"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body; font.weight: root.cursor === 2 ? Font.DemiBold : Font.Normal }
+              Text { text: "Pill style"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body; font.weight: root.cursor === 3 ? Font.DemiBold : Font.Normal }
               Text {
                 width: parent.width; wrapMode: Text.WordWrap
                 text: root.pillTheme === "omarchy" ? "Follows your Omarchy theme" : root.pillThemeName + " · a fixed look, whatever the theme"
@@ -356,14 +448,14 @@ Panel {
               anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
               text: root.stylesOpen ? "Done" : "Change"
               color: root.fg
-              opacity: styleMouse.containsMouse || root.cursor === 2 ? 0.9 : 0.5
+              opacity: styleMouse.containsMouse || root.cursor === 3 ? 0.9 : 0.5
               font.family: root.family; font.pixelSize: Style.font.caption
               MouseArea {
                 id: styleMouse
                 anchors.fill: parent; anchors.margins: -Style.space(4)
                 hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                 enabled: root.loaded
-                onEntered: root.cursor = 2
+                onEntered: root.cursor = 3
                 onClicked: root.stylesOpen = !root.stylesOpen
               }
             }
@@ -393,7 +485,7 @@ Panel {
                   Rectangle {
                     width: parent.width; height: Style.space(26); radius: Style.space(8)
                     color: "transparent"
-                    border.width: swatch.selected || (root.cursor === 2 && swatchMouse.containsMouse) ? 2 : 0
+                    border.width: swatch.selected || (root.cursor === 3 && swatchMouse.containsMouse) ? 2 : 0
                     border.color: swatch.selected ? root.accent : root.alphaOf(root.fg, 0.4)
                     Rectangle {
                       id: cap
@@ -455,7 +547,7 @@ Panel {
                   anchors.fill: parent
                   hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                   enabled: root.loaded
-                  onEntered: root.cursor = 2
+                  onEntered: root.cursor = 3
                   onClicked: root.setTheme(swatch.modelData.id)
                 }
               }
@@ -583,10 +675,10 @@ Panel {
             width: parent.width - addButton.width - parent.spacing
             foreground: root.fg
             placeholderText: "Add a word or name"
-            hasCursor: root.cursor === 3 && !activeFocus
+            hasCursor: root.cursor === 4 && !activeFocus
             onTextChanged: root.draft = text
             onAccepted: root.addWord()
-            onActiveFocusChanged: if (activeFocus) root.cursor = 3
+            onActiveFocusChanged: if (activeFocus) root.cursor = 4
             Keys.onPressed: function(event) {
               if (event.key === Qt.Key_Escape) { keyboard.forceActiveFocus(); event.accepted = true }
             }
@@ -654,10 +746,10 @@ Panel {
           foreground: root.fg
           fontFamily: root.family
           bordered: true
-          hasCursor: root.cursor === 4
+          hasCursor: root.cursor === 5
           enabled: root.service === "active" && root.daemon === "idle"
           onClicked: root.preview()
-          onHovered: function(h) { if (h) root.cursor = 4 }
+          onHovered: function(h) { if (h) root.cursor = 5 }
         }
         Item {
           width: parent.width

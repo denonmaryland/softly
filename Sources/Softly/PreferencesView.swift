@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Four rows and a permissions summary. The shortcut and microphone rows
-/// are display-only in this version; sounds is the one live toggle.
+/// The preference rows and a permissions summary. The shortcut row records
+/// the next key pressed; the microphone row is display-only.
 @MainActor
 struct PreferencesView: View {
     @ObservedObject var state: AppState
@@ -16,8 +16,8 @@ struct PreferencesView: View {
                 .padding(.top, 10)
 
             VStack(spacing: 0) {
-                PreferenceRow(title: "Dictation shortcut", subtitle: state.tapToStart ? "Tap to start and stop · or hold to talk" : "Hold to talk · let go to finish") {
-                    Keycap(label: "Right ⌥")
+                PreferenceRow(title: "Dictation shortcut", subtitle: shortcutSubtitle) {
+                    shortcutControl
                 }
                 PreferenceRow(title: "Tap to start and stop", subtitle: "Off: hold the key while you talk, let go to finish") {
                     Toggle("Tap to start and stop", isOn: $state.tapToStart)
@@ -56,6 +56,35 @@ struct PreferencesView: View {
 
             permissions
                 .padding(.top, 29)
+        }
+        // A capture left running would quietly take the next key pressed elsewhere.
+        .onDisappear { if state.capturingHotkey { state.cancelCapture() } }
+    }
+
+    private var shortcutSubtitle: String {
+        if state.capturingHotkey { return "Press Right Option, Right Command, Right Control or a function key" }
+        if let note = state.hotkeyNote { return note }
+        return state.tapToStart ? "Tap to start and stop · or hold to talk" : "Hold to talk · let go to finish"
+    }
+
+    @ViewBuilder
+    private var shortcutControl: some View {
+        if state.capturingHotkey {
+            HStack(spacing: 12) {
+                Text("Press a key…")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+                Button("Cancel", action: state.cancelCapture)
+                    .buttonStyle(.link)
+                    .font(.system(size: 14, weight: .medium))
+            }
+        } else {
+            HStack(spacing: 12) {
+                Keycap(label: state.hotkey.label)
+                Button("Change", action: state.captureHotkey)
+                    .buttonStyle(.link)
+                    .font(.system(size: 14, weight: .medium))
+            }
         }
     }
 

@@ -2,7 +2,8 @@
 
 The same app as the Mac and Linux versions: tap **Right Alt** to start dictating
 and tap it again to transcribe and paste, or hold it and release; Esc or the ×
-cancels. Local Whisper (whisper.cpp through Whisper.net) on the GPU via
+cancels. Preferences → Dictation shortcut → Change picks another key: Right
+Ctrl, Right Win or a function key. Local Whisper (whisper.cpp through Whisper.net) on the GPU via
 Vulkan when the driver allows it, otherwise CPU. Nothing leaves the PC.
 
 ```
@@ -34,15 +35,15 @@ Settings persist in `%APPDATA%\Softly\settings.json`; a log lands in
 
 | | Windows | Mac | Linux |
 |---|---|---|---|
-| Hotkey | Right Alt (swallowed, so apps never see a bare Alt) | Right Option | F9 |
+| Hotkey | Right Alt by default (swallowed, so apps never see a bare Alt); Right Ctrl, Right Win or F1–F24 | Right Option by default; Right Command, Right Control or a function key | F9 by default; Right Alt, Right Ctrl, Right Super, F8, F10–F12 in the popover |
 | Paste | Clipboard + synthetic Ctrl+V | Clipboard + ⌘V | Voxtype output helper |
 | Media pausing | System media sessions (any player) | Music, Spotify via AppleScript | Voxtype `pause_media` |
 | Pill style | 11 styles in Preferences (Midnight uses the Windows accent) | 11 styles in Preferences (Midnight uses the macOS accent) | Follows the Omarchy theme |
 | Permissions | None to grant; microphone privacy must allow desktop apps | Mic, Input Monitoring, Accessibility | n/a |
 
 Right Alt is AltGr on some keyboard layouts (German, Nordic, and others);
-on those the hotkey will swallow AltGr characters while Softly runs. The
-US layout is unaffected.
+on those the hotkey will swallow AltGr characters while Softly runs; pick
+another key in Preferences. The US layout is unaffected.
 
 ## Control pipe
 
