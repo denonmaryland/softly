@@ -198,11 +198,25 @@ def module_hotkey():
     return m.group(1).strip() if m else ""
 
 
+# A modifier pressed on its own (Right Alt, say) is still held when Hyprland
+# matches its release, so the release bind needs the modifier in front.
+MODIFIER_KEYS = {"alt": "ALT", "super": "SUPER", "control": "CTRL", "shift": "SHIFT", "meta": "ALT"}
+
+
+def release_keys(hotkey):
+    parts = [p.strip() for p in hotkey.split("+")]
+    key = parts[-1]
+    m = re.fullmatch(r"(alt|super|control|shift|meta)_[lr]", key.lower())
+    if m and MODIFIER_KEYS[m.group(1)] not in [p.upper() for p in parts[:-1]]:
+        parts.insert(len(parts) - 1, MODIFIER_KEYS[m.group(1)])
+    return " + ".join(parts)
+
+
 def render_module(hotkey):
     with open(os.path.join(PLUGIN_DIR, "hypr", "module.lua")) as f:
         text = f.read()
     unbind = 'hl.unbind("F9")  -- Omarchy binds F9 to Voxtype itself' if hotkey.replace(" ", "").upper() == "F9" else "-- (the stock F9 Voxtype binding is left alone)"
-    return text.replace("@HOTKEY@", hotkey).replace("@UNBIND@", unbind)
+    return text.replace("@RELEASE@", release_keys(hotkey)).replace("@HOTKEY@", hotkey).replace("@UNBIND@", unbind)
 
 
 def voxtype_get(key):

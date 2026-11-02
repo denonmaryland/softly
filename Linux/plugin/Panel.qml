@@ -40,6 +40,8 @@ Panel {
   property string version: ""
   property var setup: null      // {paste, voxtype, hypr, complete, hotkey, voxtypeInstalled}
   readonly property string hotkey: String(setting("hotkey", "F9") || "F9")
+  // Hyprland key names read badly in sentences; name the common modifiers.
+  readonly property string hotkeyLabel: ({ "Alt_R": "Right Alt", "Alt_L": "Left Alt", "Super_R": "Right Super", "Control_R": "Right Ctrl", "Shift_R": "Right Shift" })[hotkey] || hotkey
   readonly property bool setUp: !!(setup && setup.complete)
   property var update: null     // {current, latest, available, url} or {error}
   property bool checkingUpdate: false
@@ -56,7 +58,7 @@ Panel {
     : service !== "active" ? "Voxtype is not running"
     : daemon === "recording" || daemon === "streaming" ? "Recording…"
     : daemon === "transcribing" ? "Transcribing…"
-    : daemon === "idle" ? (tapToStart ? "Ready · tap " + hotkey + " to start, tap again to finish" : "Ready · hold " + hotkey + " while you talk") : "Starting…"
+    : daemon === "idle" ? (tapToStart ? "Ready · tap " + hotkeyLabel + " to start, tap again to finish" : "Ready · hold " + hotkeyLabel + " while you talk") : "Starting…"
 
   function alphaOf(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
   function refresh() { if (!busy) readProc.running = true }
@@ -324,7 +326,7 @@ Panel {
         SwitchRow {
           width: parent.width
           title: "Tap to start and stop"
-          caption: root.tapToStart ? "Tap once, talk, tap again to finish. Holding still works." : "Off: hold " + root.hotkey + " while you talk, let go to finish"
+          caption: root.tapToStart ? "Tap once, talk, tap again to finish. Holding still works." : "Off: hold " + root.hotkeyLabel + " while you talk, let go to finish"
           checked: root.tapToStart
           focusRing: root.cursor === 1
           onToggled: root.setTap(!root.tapToStart)
