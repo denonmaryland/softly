@@ -393,7 +393,7 @@ Panel {
           Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Names Whisper gets wrong. Saved to Voxtype on this machine; the daemon restarts after each change."
+            text: "Names Softly gets wrong. Saved to Voxtype on this machine; the daemon restarts after each change."
             color: root.fg
             opacity: 0.6
             font.family: root.family
@@ -464,7 +464,7 @@ Panel {
         }
         Text {
           visible: root.loaded && root.vocabulary.length === 0
-          text: "No words yet. Whisper uses its defaults."
+          text: "No words yet. Softly uses its defaults."
           color: root.fg
           opacity: 0.6
           font.family: root.family
@@ -494,7 +494,7 @@ Panel {
             anchors.rightMargin: Style.space(8)
             anchors.verticalCenter: parent.verticalCenter
             elide: Text.ElideRight
-            text: "Softly " + root.version + (root.model ? " · Whisper " + root.model.replace(/^ggml-/, "").replace(/\.bin$/, "") + " · local" : "")
+            text: "Softly " + root.version + (root.model ? " · " + root.model.replace(/^ggml-/, "").replace(/\.bin$/, "") + " · local" : "")
                   + (root.update && root.update.error ? " · " + root.update.error : "")
             color: root.fg
             opacity: 0.6

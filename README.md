@@ -56,6 +56,19 @@ Every copy checks GitHub Releases quietly a few hours apart and offers the new b
 
 <br>
 
+# The Windows app
+
+Windows 10 or 11, 64-bit. A GPU with Vulkan makes transcription fast; without one it runs on the CPU.
+
+1. Download `Softly-windows.zip` from the [latest release](https://github.com/denonmaryland/softly/releases/latest) and unzip it anywhere, for example `C:\Softly`.
+2. Run **Softly.exe**. The build is not code-signed, so SmartScreen shows "Windows protected your PC": press **More info**, then **Run anyway**. Nothing else needs installing; .NET is bundled.
+3. Softly opens its window. Press **Download speech model** (181 MB, once). The file is verified and kept in `%LOCALAPPDATA%\Softly\Models`.
+4. Hold **Right Alt** and talk. The tray icon opens the settings window and offers updates.
+
+Details and the build steps are in [Windows/README.md](Windows/README.md).
+
+<br>
+
 # The Mac app
 
 A menu-bar dictation app for the Mac, ported from the Omarchy plugin. It uses the same local Whisper model and settings and draws the same backlit-groove pill with the same motion. Nothing leaves the Mac.
@@ -109,31 +122,37 @@ VERSION, scripts/release.sh  One version for all platforms; release.sh tags and 
 .github/workflows/build.yml  Optional macOS CI build (only if pushed to GitHub)
 ```
 
-### Build and install
+### Install
+
+Apple Silicon, macOS 14 or later.
+
+1. Download `Softly-mac.zip` from the [latest release](https://github.com/denonmaryland/softly/releases/latest), unzip it, and drag **Softly.app** into Applications.
+2. Open it once. The build is signed but not notarized with Apple, so macOS refuses the first launch. Go to **System Settings → Privacy & Security**, scroll down, and press **Open Anyway** next to Softly. Or, in Terminal:
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Softly.app
+   ```
+
+3. Softly opens its window. Press **Download speech model** (181 MB, once). The file is verified and kept in `~/Library/Application Support/Softly/Models`.
+4. Grant **Microphone**, **Input Monitoring** and **Accessibility** when asked. Input Monitoring is for the Right Option hotkey; Accessibility is for pasting with ⌘V and intercepting Esc. The menu-bar icon shows a badge until all three are in place, and its menu links to each settings pane.
+5. Hold **Right ⌥** and talk.
+
+Updates arrive through **Check for Updates** in the menu; the window offers the new build when one is out.
+
+### Build from source
 
 Requirements: macOS 14 or later, Xcode 16 or later (open it once to accept the
-licence). Apple Silicon recommended.
+licence).
 
 ```bash
-git clone <this repo> ~/Projects/quiet-dictation-mac   # or copy the folder over
-cd ~/Projects/quiet-dictation-mac
-scripts/fetch-model.sh          # or copy the .bin from the Linux laptop (see below)
+git clone https://github.com/denonmaryland/softly ~/Projects/softly
+cd ~/Projects/softly
 swift test                      # core logic tests
 scripts/build-app.sh --install  # builds, installs to ~/Applications, launches
 ```
 
-Copying the model from Linux instead of downloading it:
-
-```bash
-scp denon@<linux-host>:~/.local/share/voxtype/models/ggml-small.en-q5_1.bin \
-  "$HOME/Library/Application Support/Softly/Models/"
-```
-
-On first launch macOS asks for **Microphone**, **Input Monitoring** and
-**Accessibility** access. Input Monitoring is for the Right Option hotkey;
-Accessibility is for pasting with ⌘V and intercepting Esc. The menu-bar icon
-shows a warning badge until everything is ready, and its menu links to each
-settings pane.
+The app downloads the model on first run; `scripts/fetch-model.sh` does the
+same from the command line.
 
 #### Keeping permissions across rebuilds
 

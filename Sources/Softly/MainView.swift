@@ -96,7 +96,7 @@ private struct Sidebar: View {
                     Text("ON THIS MAC")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
-                    Text("Whisper · English")
+                    Text("Softly · English")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.primary.opacity(0.8))
                     Text("Audio held in memory only")

@@ -6,9 +6,9 @@ enum Settings {
     static let appName = "Softly"
     static let modelFileName = "ggml-small.en-q5_1.bin"
     static let language = "en"
-    /// Names Whisper otherwise misspells. Edited in the window's Vocabulary
-    /// view; these are the first-run defaults.
-    static let defaultVocabulary = ["Omarchy", "Hyprland", "Brave", "Voxtype", "Monocode", "Denon"]
+    /// Names the model otherwise misspells, edited in the window's Vocabulary
+    /// view. Empty on first run; each person adds their own.
+    static let defaultVocabulary: [String] = []
     static let threads: Int32 = 4
     /// Recording cap (15 minutes), same as Voxtype's max_duration_secs.
     static let maxDuration: TimeInterval = 900

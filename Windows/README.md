@@ -22,9 +22,10 @@ dotnet build Softly -c Release
 .\Softly\bin\Release\net8.0-windows10.0.19041.0\win-x64\Softly.exe
 ```
 
-Model: `ggml-small.en-q5_1.bin` in `%LOCALAPPDATA%\Softly\Models\`
-(download from Hugging Face `ggerganov/whisper.cpp`; the tray menu's
-"Show Model Folder" opens the folder when it is missing).
+Model: `ggml-small.en-q5_1.bin` in `%LOCALAPPDATA%\Softly\Models\`. The
+window and the tray menu offer **Download speech model** when it is missing;
+the download is verified before the engine loads it. "Show Model Folder" in
+the tray opens the folder for a copy brought over by hand.
 
 Settings persist in `%APPDATA%\Softly\settings.json`; a log lands in
 `%LOCALAPPDATA%\Softly\softly.log` only if something goes wrong.

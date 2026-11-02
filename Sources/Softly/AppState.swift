@@ -23,10 +23,13 @@ final class AppState: ObservableObject {
         didSet { Settings.vocabulary = vocabulary }
     }
     @Published var update: Updater.State = .idle
+    @Published var modelDownload: ModelDownloader.State = .idle
 
     /// Wired by the delegate; views only call them.
     var showModelFolder: () -> Void = {}
     var reloadModel: () -> Void = {}
+    var downloadModel: () -> Void = {}
+    var cancelDownload: () -> Void = {}
     var previewPill: () -> Void = {}
     var checkForUpdates: () -> Void = {}
     var installUpdate: () -> Void = {}
@@ -53,7 +56,13 @@ final class AppState: ObservableObject {
     var statusLine: String {
         switch modelStatus {
         case .loading: return "Loading speech model…"
-        case .missingModel: return "Model missing: \(Settings.modelFileName)"
+        case .missingModel:
+            switch modelDownload {
+            case .downloading(let progress): return "Downloading speech model… \(Int(progress * 100))%"
+            case .verifying: return "Verifying speech model…"
+            case .failed: return "Speech model download failed"
+            case .idle: return "Speech model not downloaded yet"
+            }
         case .failed: return "Model failed to load"
         case .ready:
             if !hotkeysRunning { return "Waiting for keyboard permissions" }

@@ -3,6 +3,7 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let pill = PillModel()
+    private let downloader = ModelDownloader()
     private let state = AppState()
     private lazy var engine = DictationEngine(pill: pill)
     private lazy var panel = PillPanel.make(model: pill)
@@ -28,6 +29,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         state.poll = { [weak self] in self?.refresh() }
         state.showModelFolder = { [weak self] in self?.showModelFolder() }
         state.reloadModel = { [weak self] in self?.engine.loadModel() }
+        state.downloadModel = { [weak self] in self?.downloader.start() }
+        state.cancelDownload = { [weak self] in self?.downloader.cancel() }
+        downloader.onChange = { [weak self] in
+            guard let self else { return }
+            self.state.modelDownload = self.downloader.state
+        }
+        downloader.onComplete = { [weak self] in self?.engine.loadModel() }
         state.previewPill = { [weak self] in self?.engine.preview() }
         state.checkForUpdates = { [weak self] in self?.updater.check() }
         state.installUpdate = { [weak self] in self?.updater.install() }
@@ -159,6 +167,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
 
         if engine.modelStatus != .ready {
+            if engine.modelStatus == .missingModel {
+                menu.addItem(item("Download Speech Model (\(ModelDownloader.sizeMB) MB)", #selector(downloadModel)))
+            }
             menu.addItem(item("Show Model Folder", #selector(showModelFolder)))
             menu.addItem(item("Reload Model", #selector(reloadModel)))
         }
@@ -185,6 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func installUpdate() { updater.install() }
     @objc private func toggleSounds() { state.soundsEnabled.toggle() }
     @objc private func reloadModel() { engine.loadModel() }
+    @objc private func downloadModel() { downloader.start(); mainWindow.show() }
     @objc private func openInputMonitoring() { Permissions.openSettings("Privacy_ListenEvent") }
     @objc private func openAccessibility() { Permissions.openSettings("Privacy_Accessibility") }
     @objc private func openMicrophone() { Permissions.openSettings("Privacy_Microphone") }

@@ -37,7 +37,7 @@ struct PreferencesView: View {
                     .pickerStyle(.menu)
                     .fixedSize()
                 }
-                PreferenceRow(title: "Speech model", subtitle: "Whisper small.en · Q5_1 · English") {
+                PreferenceRow(title: "Speech model", subtitle: "English · small model · runs on this Mac") {
                     modelStatus
                 }
                 PreferenceRow(title: "Updates", subtitle: "Softly \(Updater.currentVersion) · checked quietly every few hours") {
@@ -63,9 +63,7 @@ struct PreferencesView: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.secondary)
         case .missingModel:
-            Button("Show Model Folder", action: state.showModelFolder)
-                .buttonStyle(.link)
-                .font(.system(size: 14, weight: .medium))
+            ModelDownloadControl(state: state)
         case .failed:
             Button("Failed · Reload", action: state.reloadModel)
                 .buttonStyle(.link)
@@ -154,6 +152,49 @@ private struct PermissionItem: View {
             }
             .buttonStyle(.plain)
             .help("Open System Settings")
+        }
+    }
+}
+
+/// Download button, progress, or the failure, for the model row and the Home
+/// status line. Idle means the file is simply not there yet.
+@MainActor
+struct ModelDownloadControl: View {
+    @ObservedObject var state: AppState
+
+    var body: some View {
+        switch state.modelDownload {
+        case .idle:
+            Button("Download speech model (\(ModelDownloader.sizeMB) MB)", action: state.downloadModel)
+                .buttonStyle(.link)
+                .font(.system(size: 14, weight: .medium))
+        case .downloading(let progress):
+            HStack(spacing: 10) {
+                ProgressView(value: progress)
+                    .frame(width: 110)
+                Text("\(Int(progress * 100))%")
+                    .font(.system(size: 13, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                Button("Cancel", action: state.cancelDownload)
+                    .buttonStyle(.link)
+                    .font(.system(size: 13))
+            }
+        case .verifying:
+            Text("Verifying…")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.secondary)
+        case .failed(let message):
+            VStack(alignment: .trailing, spacing: 4) {
+                Button("Download failed · Try again", action: state.downloadModel)
+                    .buttonStyle(.link)
+                    .font(.system(size: 14, weight: .medium))
+                Text(message)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .frame(maxWidth: 260, alignment: .trailing)
+            }
         }
     }
 }

@@ -19,6 +19,9 @@ public sealed class AppState : INotifyPropertyChanged
     private List<string> vocabulary = Settings.Vocabulary;
     private Updater.Phase updatePhase = Updater.Phase.Idle;
     private string updateVersion = "", updateError = "";
+    private ModelDownloader.Phase downloadPhase = ModelDownloader.Phase.Idle;
+    private double downloadProgress;
+    private string downloadError = "";
 
     public Transcriber.Status ModelStatus { get => modelStatus; set => Set(ref modelStatus, value, nameof(Ready), nameof(StatusLine), nameof(ModelText)); }
     public bool HotkeyRunning { get => hotkeyRunning; set => Set(ref hotkeyRunning, value, nameof(Ready), nameof(StatusLine)); }
@@ -45,10 +48,15 @@ public sealed class AppState : INotifyPropertyChanged
     public Updater.Phase UpdatePhase { get => updatePhase; set => Set(ref updatePhase, value, nameof(UpdateText)); }
     public string UpdateVersion { get => updateVersion; set => Set(ref updateVersion, value, nameof(UpdateText)); }
     public string UpdateError { get => updateError; set => Set(ref updateError, value, nameof(UpdateText)); }
+    public ModelDownloader.Phase DownloadPhase { get => downloadPhase; set => Set(ref downloadPhase, value, nameof(StatusLine), nameof(ModelText), nameof(ModelActionText)); }
+    public double DownloadProgress { get => downloadProgress; set => Set(ref downloadProgress, value, nameof(StatusLine), nameof(ModelText)); }
+    public string DownloadError { get => downloadError; set => Set(ref downloadError, value, nameof(ModelText)); }
 
     /// <summary>Wired by the app; views only call them.</summary>
     public Action ShowModelFolder = () => { };
     public Action ReloadModel = () => { };
+    public Action DownloadModel = () => { };
+    public Action CancelDownload = () => { };
     public Action PreviewPill = () => { };
     public Action CheckForUpdates = () => { };
     public Action InstallUpdate = () => { };
@@ -69,7 +77,13 @@ public sealed class AppState : INotifyPropertyChanged
     public string StatusLine => modelStatus switch
     {
         Transcriber.Status.Loading => "Loading speech model…",
-        Transcriber.Status.MissingModel => "Model missing: " + Settings.ModelFileName,
+        Transcriber.Status.MissingModel => downloadPhase switch
+        {
+            ModelDownloader.Phase.Downloading => $"Downloading speech model… {(int)(downloadProgress * 100)}%",
+            ModelDownloader.Phase.Verifying => "Verifying speech model…",
+            ModelDownloader.Phase.Failed => "Speech model download failed",
+            _ => "Speech model not downloaded yet",
+        },
         Transcriber.Status.Failed => "Model failed to load",
         _ => hotkeyRunning ? "Ready: hold Right Alt to dictate" : "Keyboard hook could not start",
     };
@@ -78,11 +92,31 @@ public sealed class AppState : INotifyPropertyChanged
     {
         Transcriber.Status.Ready => "Loaded on this PC" + (backend.Length > 0 ? " · " + backend : ""),
         Transcriber.Status.Loading => "Loading…",
-        Transcriber.Status.MissingModel => "Model missing",
+        Transcriber.Status.MissingModel => downloadPhase switch
+        {
+            ModelDownloader.Phase.Downloading => $"Downloading… {(int)(downloadProgress * 100)}%",
+            ModelDownloader.Phase.Verifying => "Verifying…",
+            ModelDownloader.Phase.Failed => "Download failed",
+            _ => "Not downloaded yet",
+        },
         _ => "Failed to load",
     };
 
-    public string PromptText => Settings.InitialPrompt.Length > 0 ? "Sent to the model as: “" + Settings.InitialPrompt + "”" : "No words yet. Whisper uses its defaults.";
+    public string PromptText => Settings.InitialPrompt.Length > 0 ? "Sent to the model as: “" + Settings.InitialPrompt + "”" : "No words yet. Softly uses its defaults.";
+
+    /// <summary>The link next to the model row and the Home status; empty when there is nothing to press.</summary>
+    public string ModelActionText => modelStatus switch
+    {
+        Transcriber.Status.Failed => "Reload",
+        Transcriber.Status.MissingModel => downloadPhase switch
+        {
+            ModelDownloader.Phase.Downloading => "Cancel",
+            ModelDownloader.Phase.Verifying => "",
+            ModelDownloader.Phase.Failed => "Try again",
+            _ => $"Download speech model ({ModelDownloader.SizeMB} MB)",
+        },
+        _ => "",
+    };
 
     private bool Set<T>(ref T field, T value, params string[] also)
     {

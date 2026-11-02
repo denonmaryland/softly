@@ -23,7 +23,7 @@ p = "Windows/Softly/Softly.csproj"; s = open(p).read()
 s = re.sub(r"<Version>[^<]*</Version>", f"<Version>{v}</Version>", s)
 open(p, "w").write(s)
 import json
-p = "Linux/denon.softly/manifest.json"; m = json.load(open(p)); m["version"] = v
+p = "Linux/plugin/manifest.json"; m = json.load(open(p)); m["version"] = v
 json.dump(m, open(p, "w"), indent=2); open(p, "a").write("\n")
 PY
 git add -A

@@ -20,7 +20,8 @@ public static class Settings
     public const double MinimumSpeech = 0.25;
     /// <summary>Recordings whose loudest moment stays below this RMS are skipped as silence.</summary>
     public const double SilenceRMS = 0.005;
-    public static readonly string[] DefaultVocabulary = { "Omarchy", "Hyprland", "Brave", "Voxtype", "Monocode", "Denon" };
+    /// <summary>Empty on first run; each person adds their own names.</summary>
+    public static readonly string[] DefaultVocabulary = { };
 
     public static string SupportDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);

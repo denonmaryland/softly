@@ -18,6 +18,7 @@ public partial class App : Application
     private Mutex? single;
     private ControlPipe? control;
     private Updater? updater;
+    private ModelDownloader? downloader;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -51,6 +52,16 @@ public partial class App : Application
         engine.OnStatusChange = Refresh;
         state.ShowModelFolder = ShowModelFolder;
         state.ReloadModel = () => engine.LoadModel();
+        downloader = new ModelDownloader(Dispatcher);
+        downloader.OnChange = () =>
+        {
+            state.DownloadPhase = downloader.State;
+            state.DownloadProgress = downloader.Progress;
+            state.DownloadError = downloader.Error;
+        };
+        downloader.OnComplete = () => engine.LoadModel();
+        state.DownloadModel = () => downloader.Start();
+        state.CancelDownload = () => downloader.Cancel();
         state.PreviewPill = () => engine.Preview();
         updater = new Updater(Dispatcher);
         updater.OnChange = () => Dispatcher.BeginInvoke(() =>
@@ -71,6 +82,8 @@ public partial class App : Application
             "open" => Run(OpenWindow),
             "cancel" => Run(() => engine.CancelNow()),
             "check-update" => Run(() => updater.Check()),
+            "download-model" => Run(() => downloader.Start()),
+            "download-state" => Task.FromResult($"{downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
             "install-update" => Run(() => updater.Install()),
             "update-state" => Task.FromResult($"{updater.State} {updater.LatestVersion} {updater.Error} current={Updater.CurrentVersion}"),
             "quit" => Run(() => Shutdown()),

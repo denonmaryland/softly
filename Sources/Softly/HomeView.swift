@@ -29,7 +29,7 @@ struct HomeView: View {
                 .padding(.top, 16)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Local Whisper. No audio saved. No transcript history.")
+                Text("Runs on this Mac. No audio saved. No transcript history.")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.primary.opacity(0.8))
                 Text("Esc cancels · Your transcript stays on the clipboard after pasting.")
@@ -48,6 +48,10 @@ struct HomeView: View {
             Text(state.ready ? "Ready to dictate" : state.statusLine)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(state.ready ? Color.green : Color.secondary)
+            if state.modelStatus == .missingModel {
+                ModelDownloadControl(state: state)
+                    .padding(.leading, 10)
+            }
         }
     }
 

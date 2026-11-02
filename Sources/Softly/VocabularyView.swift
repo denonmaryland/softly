@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Names and terms Whisper tends to misspell. They become the model's
+/// Names and terms the model tends to misspell. They become the model's
 /// initial prompt on every dictation (see Settings.initialPrompt).
 ///
 /// No Quiet Native artboard exists for this view; rows follow the
@@ -15,7 +15,7 @@ struct VocabularyView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Words it should know.")
                 .font(.system(size: 30, weight: .bold))
-            Text("Names and terms Whisper gets wrong. They are hinted to the model on every dictation and stay on this Mac.")
+            Text("Names and terms Softly gets wrong. They are hinted to the model on every dictation and stay on this Mac.")
                 .font(.system(size: 15))
                 .foregroundStyle(.secondary)
                 .padding(.top, 10)
@@ -55,7 +55,7 @@ struct VocabularyView: View {
             .padding(.top, 16)
 
             if state.vocabulary.isEmpty {
-                Text("No words yet. Whisper uses its defaults.")
+                Text("No words yet. Softly uses its defaults.")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .padding(.top, 16)

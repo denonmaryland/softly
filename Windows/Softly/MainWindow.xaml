@@ -162,7 +162,7 @@
         </StackPanel>
         <StackPanel Grid.Row="3" Margin="10,0,0,2">
           <TextBlock Text="ON THIS PC" Style="{StaticResource Caption}"/>
-          <TextBlock Text="Whisper · English" FontSize="13" Foreground="{StaticResource Ink2}" Margin="0,7,0,0"/>
+          <TextBlock Text="Softly · English" FontSize="13" Foreground="{StaticResource Ink2}" Margin="0,7,0,0"/>
           <TextBlock Text="Audio held in memory only" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,7,0,0"/>
         </StackPanel>
       </Grid>
@@ -185,6 +185,7 @@
             <StackPanel Orientation="Horizontal">
               <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource Green}" VerticalAlignment="Center"/>
               <TextBlock x:Name="StatusText" Text="Ready to dictate" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Green}" Margin="7,0,0,0" VerticalAlignment="Center"/>
+              <Button x:Name="HomeModelAction" Style="{StaticResource LinkButton}" Content="" Click="ModelActionClick" Margin="14,0,0,0" VerticalAlignment="Center" Visibility="Collapsed"/>
             </StackPanel>
             <TextBlock Text="Your words. Right where you need them." FontSize="32" FontWeight="Bold" Foreground="{StaticResource Ink}" Margin="0,14,0,0" TextWrapping="Wrap"/>
             <TextBlock Text="Speak into the app you’re using. Softly takes it from here." FontSize="15" Foreground="{StaticResource Muted}" Margin="0,14,0,0"/>
@@ -214,14 +215,14 @@
                 </DockPanel>
               </Grid>
             </Border>
-            <TextBlock Text="Local Whisper. No audio saved. No transcript history." FontSize="13" FontWeight="Medium" Foreground="{StaticResource Ink2}" Margin="0,29,0,0"/>
+            <TextBlock Text="Runs on this PC. No audio saved. No transcript history." FontSize="13" FontWeight="Medium" Foreground="{StaticResource Ink2}" Margin="0,29,0,0"/>
             <TextBlock Text="Esc cancels · Your transcript stays on the clipboard after pasting." FontSize="13" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
           </StackPanel>
 
           <!-- Vocabulary -->
           <StackPanel x:Name="VocabularyPanel" Visibility="Collapsed">
             <TextBlock Text="Words it should know." Style="{StaticResource Headline}"/>
-            <TextBlock Text="Names and terms Whisper gets wrong. They are hinted to the model on every dictation and stay on this PC." Style="{StaticResource Subhead}"/>
+            <TextBlock Text="Names and terms Softly gets wrong. They are hinted to the model on every dictation and stay on this PC." Style="{StaticResource Subhead}"/>
             <DockPanel Margin="0,26,0,0">
               <Button x:Name="AddButton" DockPanel.Dock="Right" Content="Add" Style="{StaticResource PlainButton}" Margin="10,0,0,0" Click="AddWord" IsEnabled="False"/>
               <TextBox x:Name="Draft" FontSize="15" Padding="8,6" BorderBrush="#C9D0D8" TextChanged="DraftChanged" KeyDown="DraftKeyDown"/>
@@ -274,9 +275,10 @@
                 <DockPanel>
                   <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
                     <TextBlock x:Name="ModelText" FontSize="14" FontWeight="Medium" Foreground="{StaticResource Green}"/>
-                    <Button x:Name="ModelAction" Style="{StaticResource LinkButton}" Content="Show Model Folder" Click="ModelActionClick" Visibility="Collapsed"/>
+                    <Button x:Name="ModelAction" Style="{StaticResource LinkButton}" Content="" Click="ModelActionClick" Visibility="Collapsed" HorizontalAlignment="Right"/>
+                    <TextBlock x:Name="ModelNote" FontSize="11" Foreground="{StaticResource Ink2}" TextWrapping="Wrap" MaxWidth="260" TextAlignment="Right" Visibility="Collapsed"/>
                   </StackPanel>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Speech model" Style="{StaticResource RowTitle}"/><TextBlock Text="Whisper small.en · Q5_1 · English" Style="{StaticResource RowSub}"/></StackPanel>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Speech model" Style="{StaticResource RowTitle}"/><TextBlock Text="English · small model · runs on this PC" Style="{StaticResource RowSub}"/></StackPanel>
                 </DockPanel>
               </Border>
               <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">

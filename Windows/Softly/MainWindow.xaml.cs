@@ -42,9 +42,13 @@ public partial class MainWindow : Window
         MediaSwitch.IsChecked = state.PauseMedia;
         ModelText.Text = state.ModelText;
         ModelText.Foreground = state.ModelStatus == Transcriber.Status.Ready ? Green : Muted;
-        bool trouble = state.ModelStatus is Transcriber.Status.MissingModel or Transcriber.Status.Failed;
-        ModelAction.Visibility = trouble ? Visibility.Visible : Visibility.Collapsed;
-        ModelAction.Content = state.ModelStatus == Transcriber.Status.Failed ? "Reload" : "Show Model Folder";
+        string modelAction = state.ModelActionText;
+        ModelAction.Visibility = modelAction.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ModelAction.Content = modelAction;
+        HomeModelAction.Visibility = state.ModelStatus == Transcriber.Status.MissingModel && modelAction.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        HomeModelAction.Content = modelAction;
+        ModelNote.Text = state.DownloadError;
+        ModelNote.Visibility = state.DownloadPhase == ModelDownloader.Phase.Failed && state.DownloadError.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         HookText.Text = state.HotkeyRunning ? "✓ Right Alt is reserved for Softly while it runs" : "○ The keyboard hook could not start; restart Softly";
         HookText.Foreground = state.HotkeyRunning ? Green : Muted;
         WordList.ItemsSource = state.Vocabulary;
@@ -122,6 +126,8 @@ public partial class MainWindow : Window
 
     private void ModelActionClick(object sender, RoutedEventArgs e)
     {
-        if (state.ModelStatus == Transcriber.Status.Failed) state.ReloadModel(); else state.ShowModelFolder();
+        if (state.ModelStatus == Transcriber.Status.Failed) state.ReloadModel();
+        else if (state.DownloadPhase == ModelDownloader.Phase.Downloading) state.CancelDownload();
+        else state.DownloadModel();
     }
 }
