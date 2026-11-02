@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.12
+
+- No changes to the plugin; this version keeps it in step with the Mac and
+  Windows apps.
+
 ## 0.2.11
 
 - Saying nothing types nothing. Whisper turns near-silence into lines like
