@@ -65,7 +65,9 @@ recover_previous() {
   local type
   type=$(<"$state/type")
   if [[ -n $type ]]; then
-    wl-copy --type "$type" <"$state/clip"
+    # wl-copy stays behind to serve the clipboard; detach it from Voxtype's
+    # pipes, or Voxtype waits for this hook forever and the pill never closes.
+    wl-copy --type "$type" <"$state/clip" >/dev/null 2>&1
   fi
   rm -rf "$state"
 }
