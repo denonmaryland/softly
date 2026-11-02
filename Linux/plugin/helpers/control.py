@@ -178,6 +178,9 @@ VOXTYPE_KEYS = {
     "output.post_output_command": PASTE_DEST + " paste",
     "output.post_process.command": FIX_DEST,
     "output.post_process.fallback_on_empty": "false",  # all filler, or just "submit": type nothing
+    # Transcribe while you talk, cutting at pauses about every 15 s like the Mac and Windows apps.
+    "whisper.eager_processing": "true",
+    "whisper.eager_chunk_secs": "15.0",
     "osd.enabled": "false",      # the pill replaces Voxtype's overlay
     "hotkey.enabled": "false",   # Hyprland drives it
 }

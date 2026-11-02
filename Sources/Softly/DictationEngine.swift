@@ -18,6 +18,13 @@ final class DictationEngine {
     private let recorder = AudioRecorder()
     private let transcriber = Transcriber()
     private var capTimer: Timer?
+    /// Transcribing while you talk: pieces of a long recording, in order,
+    /// filled in as they finish; `committed` samples have been handed out.
+    private var pieces: [String?] = []
+    private var piecesDone = 0
+    private var committed = 0
+    private var chunkTimer: Timer?
+    private var chunkInFlight = false
     /// Bumped on every start/cancel so stale timers and results are ignored.
     private var session = 0
 
@@ -119,11 +126,52 @@ final class DictationEngine {
         Sounds.playOpen()
         MediaPauser.shared.pause()
         capTimer = scheduled(Settings.maxDuration) { [weak self] in self?.handle(.stop) }
+        pieces = []
+        piecesDone = 0
+        committed = 0
+        chunkInFlight = false
+        chunkTimer?.invalidate()
+        let timer = Timer(timeInterval: 1, repeats: true) { _ in
+            MainActor.assumeIsolated { [weak self] in self?.transcribeAhead() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        chunkTimer = timer
+    }
+
+    /// Once a second while recording: when enough audio has piled up and
+    /// there is a pause to cut at, transcribe up to it in the background.
+    private func transcribeAhead() {
+        guard state == .recording, !chunkInFlight else { return }
+        let pending = recorder.pending(from: committed)
+        guard let cut = Chunking.cut(pending) else { return }
+        let audio = Array(pending[..<cut])
+        committed += cut
+        chunkInFlight = true
+        let index = pieces.count
+        pieces.append(nil)
+        let token = session
+        transcriber.transcribe(audio, context: Chunking.join(pieces) ?? "") { text in
+            Task { @MainActor [weak self] in
+                guard let self, self.session == token else { return }
+                self.chunkInFlight = false
+                self.pieceFinished(index, text)
+            }
+        }
+    }
+
+    private func pieceFinished(_ index: Int, _ text: String?) {
+        pieces[index] = text
+        piecesDone += 1
+        // All pieces in, including the last one queued at stop: finish.
+        if state == .transcribing, piecesDone == pieces.count {
+            finish(Chunking.join(pieces))
+        }
     }
 
     private func stopRecording() {
         guard state == .recording else { return }
         capTimer?.invalidate()
+        chunkTimer?.invalidate()
         let (samples, peak) = recorder.stop()
         MediaPauser.shared.resume()
         state = .transcribing
@@ -136,10 +184,28 @@ final class DictationEngine {
             return
         }
         let token = session
-        transcriber.transcribe(samples) { text in
+        guard committed > 0 else {
+            transcriber.transcribe(samples) { text in
+                Task { @MainActor [weak self] in
+                    guard let self, self.session == token, self.state == .transcribing else { return }
+                    self.finish(text)
+                }
+            }
+            return
+        }
+        // Earlier pieces were transcribed while recording; only the rest is left.
+        let tail = committed < samples.count ? Array(samples[committed...]) : []
+        guard Double(tail.count) / 16_000 >= Settings.minimumSpeech,
+              Double(Chunking.loudest(tail)) >= Settings.silenceRMS else {
+            if piecesDone == pieces.count { finish(Chunking.join(pieces)) }
+            return
+        }
+        let index = pieces.count
+        pieces.append(nil)
+        transcriber.transcribe(tail, context: Chunking.join(pieces) ?? "") { text in
             Task { @MainActor [weak self] in
                 guard let self, self.session == token, self.state == .transcribing else { return }
-                self.finish(text)
+                self.pieceFinished(index, text)
             }
         }
     }
@@ -179,6 +245,7 @@ final class DictationEngine {
     private func discard() {
         session += 1
         capTimer?.invalidate()
+        chunkTimer?.invalidate()
         if state == .recording {
             recorder.stop()
             MediaPauser.shared.resume()

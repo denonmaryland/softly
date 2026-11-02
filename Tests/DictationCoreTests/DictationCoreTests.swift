@@ -212,3 +212,43 @@ final class SubmitWordTests: XCTestCase {
         XCTAssertEqual(SubmitWord.split("Submit the form tomorrow.").text, "Submit the form tomorrow.")
     }
 }
+
+// Same cases as ChunkingTests in Windows/Softly.Core.Tests.
+final class ChunkingTests: XCTestCase {
+    /// "Speech" (a loud tone) with silent gaps at the given seconds.
+    private func audio(seconds: Double, pauses: [Double]) -> [Float] {
+        let rate = Chunking.sampleRate
+        return (0..<Int(seconds * Double(rate))).map { i in
+            let t = Double(i) / Double(rate)
+            let silent = pauses.contains { t >= $0 && t < $0 + 0.5 }
+            return silent ? 0 : Float(0.3 * sin(Double(i) * 0.07))
+        }
+    }
+
+    func testShortAudioIsNeverCut() {
+        XCTAssertNil(Chunking.cut(audio(seconds: 14, pauses: [10])))
+    }
+
+    func testCutsInTheLatestPause() {
+        let cut = Chunking.cut(audio(seconds: 18, pauses: [9, 13]))
+        XCTAssertNotNil(cut)
+        let seconds = Double(cut!) / Double(Chunking.sampleRate)
+        XCTAssertEqual(seconds, 13.25, accuracy: 0.1)
+    }
+
+    func testIgnoresAPauseInTheNewestSecond() {
+        XCTAssertNil(Chunking.cut(audio(seconds: 16, pauses: [15.3])))
+    }
+
+    func testForcesACutWhenNobodyPauses() {
+        XCTAssertNil(Chunking.cut(audio(seconds: 20, pauses: [])))
+        let cut = Chunking.cut(audio(seconds: 26, pauses: []))
+        XCTAssertNotNil(cut)
+        XCTAssertLessThan(cut!, 25 * Chunking.sampleRate)
+    }
+
+    func testJoin() {
+        XCTAssertEqual(Chunking.join(["One.", nil, "", "Two."]), "One. Two.")
+        XCTAssertNil(Chunking.join([nil, ""]))
+    }
+}

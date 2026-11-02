@@ -106,6 +106,7 @@ public partial class App : Application
             "check-update" => Run(() => updater.Check()),
             "download-model" => Run(() => downloader.Start(SpeechModel.Current)),
             "model-state" => Task.FromResult($"model={state.SpeechModel} status={engine.ModelStatus} downloading={state.DownloadingModel} {downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
+            var t when t.StartsWith("transcribe-ahead ") => engine.TranscribeAheadFileAsync(t.Substring(17)),
             var t when t.StartsWith("choose-model ") => Run(() => ChooseModel(t.Substring(13))),
             "download-state" => Task.FromResult($"{downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
             "install-update" => Run(() => updater.Install()),

@@ -29,6 +29,13 @@ public sealed class DictationEngine
     private readonly Transcriber transcriber = new();
     private readonly Dispatcher dispatcher;
     private DispatcherTimer? capTimer;
+    /// <summary>
+    /// Transcribing while you talk: pieces of a long recording, in order;
+    /// <c>committed</c> samples have been handed out.
+    /// </summary>
+    private readonly List<Task<string?>> pieces = new();
+    private int committed;
+    private DispatcherTimer? chunkTimer;
     /// <summary>Bumped on every start/cancel so stale timers and results are ignored.</summary>
     private int session;
 
@@ -90,6 +97,49 @@ public sealed class DictationEngine
         {
             Handle(GestureEvent.Cancel);
         }
+    }
+
+    /// <summary>
+    /// Test hook: plays a WAV file through transcribe-while-talking as if it
+    /// were being recorded, and compares the wait after "stop" with a single
+    /// pass over the whole file. Nothing is pasted.
+    /// </summary>
+    public async Task<string> TranscribeAheadFileAsync(string path)
+    {
+        if (ModelStatus != Transcriber.Status.Ready) return "model not ready: " + ModelStatus;
+        float[] samples;
+        try { samples = ReadWav(path); } catch (Exception e) { return "read failed: " + e.Message; }
+        var done = new List<string?>();
+        int start = 0;
+        for (int end = Chunking.SampleRate; end <= samples.Length; end += Chunking.SampleRate)
+        {
+            if (Chunking.Cut(samples[start..end]) is int cut)
+            {
+                done.Add(await transcriber.TranscribeAsync(samples[start..(start + cut)], Chunking.Join(done) ?? ""));
+                start += cut;
+            }
+        }
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var last = await transcriber.TranscribeAsync(samples[start..], Chunking.Join(done) ?? "");
+        double after = sw.Elapsed.TotalSeconds;
+        sw.Restart();
+        var whole = await transcriber.TranscribeAsync(samples);
+        double single = sw.Elapsed.TotalSeconds;
+        return $"{samples.Length / 16_000.0:0.0}s audio, {done.Count + 1} pieces; wait after stop {after:0.00}s vs single pass {single:0.00}s || " +
+               $"PIECES: {Chunking.Join(done.Append(last))} || SINGLE: {whole}";
+    }
+
+    private static float[] ReadWav(string path)
+    {
+        using var reader = new AudioFileReader(path);
+        ISampleProvider provider = reader;
+        if (reader.WaveFormat.Channels == 2) provider = provider.ToMono();
+        var resampled = new WdlResamplingSampleProvider(provider, 16_000);
+        var all = new List<float>();
+        var chunk = new float[8192];
+        int n;
+        while ((n = resampled.Read(chunk, 0, chunk.Length)) > 0) all.AddRange(new ArraySegment<float>(chunk, 0, n));
+        return all.ToArray();
     }
 
     /// <summary>Test hook: transcribes a WAV file through the loaded model without pasting.</summary>
@@ -179,12 +229,32 @@ public sealed class DictationEngine
         MediaPauser.Shared.Pause();
         capTimer?.Stop();
         capTimer = Timing.After(Settings.MaxDuration, () => Handle(GestureEvent.Stop));
+        pieces.Clear();
+        committed = 0;
+        chunkTimer?.Stop();
+        chunkTimer = new DispatcherTimer(DispatcherPriority.Background, dispatcher) { Interval = TimeSpan.FromSeconds(1) };
+        chunkTimer.Tick += (_, _) => TranscribeAhead();
+        chunkTimer.Start();
+    }
+
+    /// <summary>
+    /// Once a second while recording: when enough audio has piled up and
+    /// there is a pause to cut at, transcribe up to it in the background.
+    /// </summary>
+    private void TranscribeAhead()
+    {
+        if (State != RecorderState.Recording || pieces.Any(p => !p.IsCompleted)) return;
+        var pending = recorder.Pending(committed);
+        if (Chunking.Cut(pending) is not int cut) return;
+        committed += cut;
+        pieces.Add(transcriber.TranscribeAsync(pending[..cut], Chunking.Join(pieces.Select(p => p.Result)) ?? ""));
     }
 
     private async void StopRecording()
     {
         if (State != RecorderState.Recording) return;
         capTimer?.Stop();
+        chunkTimer?.Stop();
         var (samples, peak) = recorder.Stop();
         MediaPauser.Shared.Resume();
         State = RecorderState.Transcribing;
@@ -198,7 +268,20 @@ public sealed class DictationEngine
             return;
         }
         int token = session;
-        var text = await transcriber.TranscribeAsync(samples);
+        string? text;
+        if (committed == 0)
+        {
+            text = await transcriber.TranscribeAsync(samples);
+        }
+        else
+        {
+            // Earlier pieces were transcribed while recording; only the rest is left.
+            var done = await Task.WhenAll(pieces);
+            var tail = samples[Math.Min(committed, samples.Length)..];
+            bool speech = tail.Length / 16_000.0 >= Settings.MinimumSpeech && Chunking.Loudest(tail) >= Settings.SilenceRMS;
+            var last = speech ? await transcriber.TranscribeAsync(tail, Chunking.Join(done) ?? "") : null;
+            text = Chunking.Join(done.Append(last));
+        }
         if (session != token || State != RecorderState.Transcribing) return;
         Finish(text);
     }
@@ -234,6 +317,7 @@ public sealed class DictationEngine
     {
         session++;
         capTimer?.Stop();
+        chunkTimer?.Stop();
         if (State == RecorderState.Recording)
         {
             recorder.Stop();

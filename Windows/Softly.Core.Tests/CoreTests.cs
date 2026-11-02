@@ -270,3 +270,51 @@ public class SubmitWordTests
         Assert.Equal(("Submit the form tomorrow.", false), SubmitWord.Split("Submit the form tomorrow."));
     }
 }
+
+// Same cases as ChunkingTests in Tests/DictationCoreTests.
+public class ChunkingTests
+{
+    /// <summary>"Speech" (a loud tone) with silent gaps at the given seconds.</summary>
+    private static float[] Audio(double seconds, params double[] pauses)
+    {
+        int rate = Chunking.SampleRate;
+        var a = new float[(int)(seconds * rate)];
+        for (int i = 0; i < a.Length; i++)
+        {
+            double t = (double)i / rate;
+            bool silent = pauses.Any(p => t >= p && t < p + 0.5);
+            a[i] = silent ? 0 : (float)(0.3 * Math.Sin(i * 0.07));
+        }
+        return a;
+    }
+
+    [Fact]
+    public void ShortAudioIsNeverCut() => Assert.Null(Chunking.Cut(Audio(14, 10)));
+
+    [Fact]
+    public void CutsInTheLatestPause()
+    {
+        var cut = Chunking.Cut(Audio(18, 9, 13));
+        Assert.NotNull(cut);
+        Assert.InRange((double)cut!.Value / Chunking.SampleRate, 13.15, 13.35);
+    }
+
+    [Fact]
+    public void IgnoresAPauseInTheNewestSecond() => Assert.Null(Chunking.Cut(Audio(16, 15.3)));
+
+    [Fact]
+    public void ForcesACutWhenNobodyPauses()
+    {
+        Assert.Null(Chunking.Cut(Audio(20)));
+        var cut = Chunking.Cut(Audio(26));
+        Assert.NotNull(cut);
+        Assert.True(cut!.Value < 25 * Chunking.SampleRate);
+    }
+
+    [Fact]
+    public void Join()
+    {
+        Assert.Equal("One. Two.", Chunking.Join(new[] { "One.", null, "", "Two." }));
+        Assert.Null(Chunking.Join(new string?[] { null, "" }));
+    }
+}

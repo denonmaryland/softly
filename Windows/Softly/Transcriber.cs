@@ -40,8 +40,12 @@ public sealed class Transcriber : IDisposable
         }
     }
 
-    /// <summary>Returns cleaned text, or null when nothing was said or decoding failed.</summary>
-    public async Task<string?> TranscribeAsync(float[] samples)
+    /// <summary>
+    /// Returns cleaned text, or null when nothing was said or decoding failed.
+    /// <paramref name="earlier"/> is the text just before this audio, when it is a
+    /// later piece of a longer recording; it keeps spelling and casing in step.
+    /// </summary>
+    public async Task<string?> TranscribeAsync(float[] samples, string earlier = "")
     {
         await gate.WaitAsync();
         try
@@ -49,7 +53,8 @@ public sealed class Transcriber : IDisposable
             var f = factory;
             if (f == null) return null;
             var audio = Transcript.Padded(samples);
-            var prompt = Settings.InitialPrompt;
+            var tail = earlier.Length > 200 ? earlier[^200..] : earlier;
+            var prompt = string.Join(" ", new[] { Settings.InitialPrompt, tail }.Where(p => p.Length > 0));
             var builder = f.CreateBuilder()
                 .WithLanguage(Settings.Language)
                 .WithThreads(Settings.Threads)

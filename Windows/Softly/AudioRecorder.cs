@@ -26,6 +26,12 @@ public sealed class AudioRecorder
 
     public double CurrentRMS { get { lock (gate) return level; } }
 
+    /// <summary>A copy of the samples captured so far, from <paramref name="start"/> on, for transcribing while recording continues.</summary>
+    public float[] Pending(int start)
+    {
+        lock (gate) return start < samples.Count ? samples.GetRange(start, samples.Count - start).ToArray() : Array.Empty<float>();
+    }
+
     /// <summary>
     /// Touches the capture device and the resampler once so the first
     /// recording does not pay for device activation and JIT. The microphone

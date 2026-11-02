@@ -27,6 +27,12 @@ final class AudioRecorder: @unchecked Sendable {
 
     var currentRMS: Double { lock.withLock { level } }
 
+    /// A copy of the samples captured so far, from `start` on, for
+    /// transcribing while recording continues.
+    func pending(from start: Int) -> [Float] {
+        lock.withLock { start < samples.count ? Array(samples[start...]) : [] }
+    }
+
     func start() throws {
         guard !running else { return }
         let input = engine.inputNode

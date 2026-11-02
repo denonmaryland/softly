@@ -34,8 +34,10 @@ final class Transcriber: @unchecked Sendable {
         }
     }
 
-    /// Calls back with cleaned text, or nil when nothing was said or decoding failed.
-    func transcribe(_ samples: [Float], completion: @escaping @Sendable (String?) -> Void) {
+    /// Calls back with cleaned text, or nil when nothing was said or decoding
+    /// failed. `context` is the text just before this audio, when it is a
+    /// later piece of a longer recording; it keeps spelling and casing in step.
+    func transcribe(_ samples: [Float], context earlier: String = "", completion: @escaping @Sendable (String?) -> Void) {
         queue.async {
             guard let context = self.context else {
                 completion(nil)
@@ -56,7 +58,8 @@ final class Transcriber: @unchecked Sendable {
             params.no_speech_thold = 0.6
 
             let audio = Transcript.padded(samples)
-            let prompt = Settings.initialPrompt
+            let prompt = [Settings.initialPrompt, String(earlier.suffix(200))]
+                .filter { !$0.isEmpty }.joined(separator: " ")
             let result: Int32 = Settings.language.withCString { language in
                 prompt.withCString { promptC in
                     params.language = language
