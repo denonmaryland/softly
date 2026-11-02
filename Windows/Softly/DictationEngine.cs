@@ -128,6 +128,7 @@ public sealed class DictationEngine
 
     private void Handle(GestureEvent e)
     {
+        controller.TapToStart = Settings.TapToStart;
         foreach (var action in controller.Send(e, PillModel.Now, State))
         {
             switch (action)

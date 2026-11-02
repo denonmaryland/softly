@@ -194,7 +194,7 @@
                 <Border Style="{StaticResource Keycap}"><TextBlock Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
                 <StackPanel Margin="26,0,0,0" VerticalAlignment="Center">
                   <TextBlock Text="Hold to speak. Release to paste." FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
-                  <TextBlock Text="Tap to start, tap again to finish. Or hold to talk." FontSize="14" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
+                  <TextBlock x:Name="HomeGestureText" Text="Tap to start, tap again to finish. Or hold to talk." FontSize="14" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
                 </StackPanel>
               </StackPanel>
             </Border>
@@ -250,7 +250,13 @@
               <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
                 <DockPanel>
                   <Border DockPanel.Dock="Right" Style="{StaticResource Keycap}"><TextBlock Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Dictation shortcut" Style="{StaticResource RowTitle}"/><TextBlock Text="Tap to start and stop · hold to talk" Style="{StaticResource RowSub}"/></StackPanel>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Dictation shortcut" Style="{StaticResource RowTitle}"/><TextBlock x:Name="ShortcutSub" Text="Tap to start and stop · or hold to talk" Style="{StaticResource RowSub}"/></StackPanel>
+                </DockPanel>
+              </Border>
+              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
+                <DockPanel>
+                  <CheckBox x:Name="TapSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Click="TapChanged"/>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Tap to start and stop" Style="{StaticResource RowTitle}"/><TextBlock Text="Off: hold the key while you talk, let go to finish" Style="{StaticResource RowSub}"/></StackPanel>
                 </DockPanel>
               </Border>
               <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">

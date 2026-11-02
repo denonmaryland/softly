@@ -51,6 +51,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "pauseMedia") }
     }
 
+    /// Tap once to start hands-free and again to finish. Off is hold-only.
+    static var tapToStart: Bool {
+        get { UserDefaults.standard.object(forKey: "tapToStart") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "tapToStart") }
+    }
+
     /// The pill's style, an id from PillTheme.all.
     static var pillTheme: String {
         get { UserDefaults.standard.string(forKey: "pillTheme") ?? "system" }

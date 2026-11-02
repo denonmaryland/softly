@@ -61,7 +61,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Hold to speak. Release to paste.")
                     .font(.system(size: 18, weight: .semibold))
-                Text("Tap to start, tap again to finish. Or hold to talk.")
+                Text(state.tapToStart ? "Tap to start, tap again to finish. Or hold to talk." : "Hold the key while you talk, then let go.")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }

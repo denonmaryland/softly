@@ -27,6 +27,7 @@ Panel {
   property bool loaded: false
   property bool sounds: true
   property string pillTheme: "omarchy"
+  property bool tapToStart: true
   // The pill follows Omarchy by default; the fixed styles are for the Mac and
   // Windows apps mostly, so the grid stays folded away until asked for.
   property bool stylesOpen: false
@@ -45,9 +46,9 @@ Panel {
   property string message: ""
   property var pending: []     // helper commands waiting their turn
   property string draft: ""
-  // Keyboard rows: 0 sounds · 1 pill style (Enter opens, left/right picks) · 2 add field · 3 preview · 4+ words.
+  // Keyboard rows: 0 sounds · 1 tap to start · 2 pill style (Enter opens, left/right picks) · 3 add field · 4 preview · 5+ words.
   property int cursor: 0
-  readonly property int wordRow0: 4
+  readonly property int wordRow0: 5
   readonly property int rowCount: wordRow0 + vocabulary.length
 
   readonly property bool busy: readProc.running || writeProc.running || pending.length > 0
@@ -55,7 +56,7 @@ Panel {
     : service !== "active" ? "Voxtype is not running"
     : daemon === "recording" || daemon === "streaming" ? "Recording…"
     : daemon === "transcribing" ? "Transcribing…"
-    : daemon === "idle" ? "Ready · tap " + hotkey + " to start, tap again to finish" : "Starting…"
+    : daemon === "idle" ? (tapToStart ? "Ready · tap " + hotkey + " to start, tap again to finish" : "Ready · hold " + hotkey + " while you talk") : "Starting…"
 
   function alphaOf(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
   function refresh() { if (!busy) readProc.running = true }
@@ -65,6 +66,7 @@ Panel {
       loaded = true
       sounds = s.sounds !== false
       pillTheme = s.pillTheme || "omarchy"
+      tapToStart = s.tapToStart !== false
       vocabulary = s.vocabulary || []
       service = s.service || "unknown"
       daemon = s.daemon || "unknown"
@@ -91,6 +93,11 @@ Panel {
     sounds = on
     message = ""
     send(["set", "sounds", on ? "true" : "false"])
+  }
+  function setTap(on) {
+    tapToStart = on
+    message = ""
+    send(["set", "tap", on ? "true" : "false"])
   }
   function setTheme(id) {
     if (id === pillTheme) return
@@ -136,9 +143,10 @@ Panel {
   }
   function activate() {
     if (cursor === 0) setSounds(!sounds)
-    else if (cursor === 1) stylesOpen = !stylesOpen
-    else if (cursor === 2) wordField.forceActiveFocus()
-    else if (cursor === 3) preview()
+    else if (cursor === 1) setTap(!tapToStart)
+    else if (cursor === 2) stylesOpen = !stylesOpen
+    else if (cursor === 3) wordField.forceActiveFocus()
+    else if (cursor === 4) preview()
     else if (cursor - wordRow0 < vocabulary.length) removeWord(vocabulary[cursor - wordRow0])
   }
   onRowCountChanged: if (cursor >= rowCount) cursor = Math.max(0, rowCount - 1)
@@ -157,7 +165,7 @@ Panel {
     function close(): void { root.close() }
     function toggle(): void { root.toggle() }
     function state(): string {
-      return JSON.stringify({loaded: root.loaded, sounds: root.sounds, pillTheme: root.pillTheme, vocabulary: root.vocabulary,
+      return JSON.stringify({loaded: root.loaded, sounds: root.sounds, tapToStart: root.tapToStart, pillTheme: root.pillTheme, vocabulary: root.vocabulary,
                              service: root.service, daemon: root.daemon, model: root.model, message: root.message})
     }
   }
@@ -213,7 +221,7 @@ Panel {
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onMoveRequested: function(dx, dy) {
         if (dy) root.cursor = Math.max(0, Math.min(root.rowCount - 1, root.cursor + dy))
-        else if (dx && root.cursor === 1 && root.stylesOpen) root.stepTheme(dx)
+        else if (dx && root.cursor === 2 && root.stylesOpen) root.stepTheme(dx)
       }
       onActivateRequested: root.activate()
 
@@ -313,6 +321,16 @@ Panel {
           onHoveredIn: root.cursor = 0
         }
 
+        SwitchRow {
+          width: parent.width
+          title: "Tap to start and stop"
+          caption: root.tapToStart ? "Tap once, talk, tap again to finish. Holding still works." : "Off: hold " + root.hotkey + " while you talk, let go to finish"
+          checked: root.tapToStart
+          focusRing: root.cursor === 1
+          onToggled: root.setTap(!root.tapToStart)
+          onHoveredIn: root.cursor = 1
+        }
+
         // ---------- Pill style: Omarchy's theme or a fixed look ----------
         Column {
           width: parent.width
@@ -324,7 +342,7 @@ Panel {
               id: styleText
               width: parent.width - styleLink.implicitWidth - Style.space(12)
               spacing: Style.space(2)
-              Text { text: "Pill style"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body; font.weight: root.cursor === 1 ? Font.DemiBold : Font.Normal }
+              Text { text: "Pill style"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body; font.weight: root.cursor === 2 ? Font.DemiBold : Font.Normal }
               Text {
                 width: parent.width; wrapMode: Text.WordWrap
                 text: root.pillTheme === "omarchy" ? "Follows your Omarchy theme" : root.pillThemeName + " · a fixed look, whatever the theme"
@@ -336,14 +354,14 @@ Panel {
               anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
               text: root.stylesOpen ? "Done" : "Change"
               color: root.fg
-              opacity: styleMouse.containsMouse || root.cursor === 1 ? 0.9 : 0.5
+              opacity: styleMouse.containsMouse || root.cursor === 2 ? 0.9 : 0.5
               font.family: root.family; font.pixelSize: Style.font.caption
               MouseArea {
                 id: styleMouse
                 anchors.fill: parent; anchors.margins: -Style.space(4)
                 hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                 enabled: root.loaded
-                onEntered: root.cursor = 1
+                onEntered: root.cursor = 2
                 onClicked: root.stylesOpen = !root.stylesOpen
               }
             }
@@ -373,7 +391,7 @@ Panel {
                   Rectangle {
                     width: parent.width; height: Style.space(26); radius: Style.space(8)
                     color: "transparent"
-                    border.width: swatch.selected || (root.cursor === 1 && swatchMouse.containsMouse) ? 2 : 0
+                    border.width: swatch.selected || (root.cursor === 2 && swatchMouse.containsMouse) ? 2 : 0
                     border.color: swatch.selected ? root.accent : root.alphaOf(root.fg, 0.4)
                     Rectangle {
                       id: cap
@@ -435,7 +453,7 @@ Panel {
                   anchors.fill: parent
                   hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                   enabled: root.loaded
-                  onEntered: root.cursor = 1
+                  onEntered: root.cursor = 2
                   onClicked: root.setTheme(swatch.modelData.id)
                 }
               }
@@ -563,10 +581,10 @@ Panel {
             width: parent.width - addButton.width - parent.spacing
             foreground: root.fg
             placeholderText: "Add a word or name"
-            hasCursor: root.cursor === 2 && !activeFocus
+            hasCursor: root.cursor === 3 && !activeFocus
             onTextChanged: root.draft = text
             onAccepted: root.addWord()
-            onActiveFocusChanged: if (activeFocus) root.cursor = 2
+            onActiveFocusChanged: if (activeFocus) root.cursor = 3
             Keys.onPressed: function(event) {
               if (event.key === Qt.Key_Escape) { keyboard.forceActiveFocus(); event.accepted = true }
             }
@@ -634,10 +652,10 @@ Panel {
           foreground: root.fg
           fontFamily: root.family
           bordered: true
-          hasCursor: root.cursor === 3
+          hasCursor: root.cursor === 4
           enabled: root.service === "active" && root.daemon === "idle"
           onClicked: root.preview()
-          onHovered: function(h) { if (h) root.cursor = 3 }
+          onHovered: function(h) { if (h) root.cursor = 4 }
         }
         Item {
           width: parent.width

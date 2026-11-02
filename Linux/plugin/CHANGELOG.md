@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.6
+
+- New "Tap to start and stop" switch in the popover, on by default. Turn
+  it off for hold-only: hold the key while you talk and let go to finish.
+  The Mac and Windows apps get the same switch in Preferences.
+
 ## 0.2.5
 
 - The pill still follows your Omarchy theme. For anyone who wants a fixed

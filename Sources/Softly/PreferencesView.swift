@@ -16,8 +16,13 @@ struct PreferencesView: View {
                 .padding(.top, 10)
 
             VStack(spacing: 0) {
-                PreferenceRow(title: "Dictation shortcut", subtitle: "Tap to start and stop · hold to talk") {
+                PreferenceRow(title: "Dictation shortcut", subtitle: state.tapToStart ? "Tap to start and stop · or hold to talk" : "Hold to talk · let go to finish") {
                     Keycap(label: "Right ⌥")
+                }
+                PreferenceRow(title: "Tap to start and stop", subtitle: "Off: hold the key while you talk, let go to finish") {
+                    Toggle("Tap to start and stop", isOn: $state.tapToStart)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
                 }
                 PreferenceRow(title: "Play sounds", subtitle: "A subtle cue when recording starts and ends") {
                     Toggle("Play sounds", isOn: $state.soundsEnabled)

@@ -26,6 +26,14 @@ final class GestureControllerTests: XCTestCase {
         XCTAssertTrue(c.locked)
     }
 
+    func testHoldOnlyFinishesOnAnyRelease() {
+        var c = GestureController()
+        c.tapToStart = false
+        XCTAssertEqual(c.send(.press, now: 0, state: .idle), [.start])
+        XCTAssertEqual(c.send(.release, now: 0.08, state: .recording), [.stop])
+        XCTAssertFalse(c.locked)
+    }
+
     func testResetWhileHeldIgnoresRelease() {
         var c = GestureController()
         _ = c.send(.press, now: 0, state: .idle)

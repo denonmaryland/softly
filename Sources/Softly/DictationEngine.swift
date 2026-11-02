@@ -81,6 +81,7 @@ final class DictationEngine {
     // MARK: Gesture actions
 
     private func handle(_ event: GestureEvent) {
+        controller.tapToStart = Settings.tapToStart
         let actions = controller.send(event, now: PillModel.now, state: state)
         for action in actions {
             switch action {

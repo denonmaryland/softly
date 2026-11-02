@@ -18,6 +18,9 @@ public sealed class GestureController
     /// longer ones are push-to-talk and finish on release.</summary>
     public const double HoldThreshold = 0.5;
 
+    /// <summary>The "Tap to start and stop" setting. Off means hold-only: release always finishes.</summary>
+    public bool TapToStart { get; set; } = true;
+
     public bool Held { get; private set; }
     public bool Locked { get; private set; }
     public bool Owned { get; private set; }
@@ -65,7 +68,7 @@ public sealed class GestureController
                 Held = false;
                 if (ignoreRelease) { ignoreRelease = false; return new(); }
                 if (Locked || !Owned) return new();
-                if (now - pressedAt < HoldThreshold)
+                if (TapToStart && now - pressedAt < HoldThreshold)
                 {
                     Locked = true;
                     return new();

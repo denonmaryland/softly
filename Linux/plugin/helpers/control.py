@@ -3,6 +3,7 @@
 
     control.py state                 -> JSON snapshot
     control.py set sounds true|false -> ~/.config/omarchy/softly.json
+    control.py set tap true|false    -> tap to start and stop (false: hold-only), same file
     control.py set theme <id>        -> pill style (see Themes.js), same file
     control.py add <word>            -> Voxtype whisper.initial_prompt, restart daemon
     control.py remove <word>         -> same
@@ -365,6 +366,7 @@ def state(errors=None):
         "ok": not errors,
         "errors": errors,
         "sounds": settings.get("sounds", True) is not False,
+        "tapToStart": settings.get("tapToStart", True) is not False,
         "pillTheme": settings.get("pillTheme") if isinstance(settings.get("pillTheme"), str) else "omarchy",
         "vocabulary": current_words(),
         "service": active or "unknown",
@@ -382,6 +384,10 @@ def main(argv):
     if cmd == "set" and len(argv) == 4 and argv[2] == "sounds":
         settings = read_settings()
         settings["sounds"] = argv[3].lower() in ("1", "true", "yes", "on")
+        write_settings(settings)
+    elif cmd == "set" and len(argv) == 4 and argv[2] == "tap":
+        settings = read_settings()
+        settings["tapToStart"] = argv[3].lower() in ("1", "true", "yes", "on")
         write_settings(settings)
     elif cmd == "set" and len(argv) == 4 and argv[2] == "theme":
         if re.fullmatch(r"[a-z0-9-]{1,32}", argv[3]):

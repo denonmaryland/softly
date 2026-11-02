@@ -17,6 +17,7 @@ public sealed class AppState : INotifyPropertyChanged
     private bool soundsEnabled = Settings.SoundsEnabled;
     private bool pauseMedia = Settings.PauseMedia;
     private string pillTheme = Settings.PillTheme;
+    private bool tapToStart = Settings.TapToStart;
     private List<string> vocabulary = Settings.Vocabulary;
     private Updater.Phase updatePhase = Updater.Phase.Idle;
     private string updateVersion = "", updateError = "";
@@ -38,6 +39,12 @@ public sealed class AppState : INotifyPropertyChanged
     {
         get => pauseMedia;
         set { if (Set(ref pauseMedia, value)) Settings.PauseMedia = value; }
+    }
+
+    public bool TapToStart
+    {
+        get => tapToStart;
+        set { if (Set(ref tapToStart, value)) Settings.TapToStart = value; }
     }
 
     public string PillTheme

@@ -3,6 +3,7 @@
 //
 //  Tap the key             → start hands-free; tap again to finish.
 //  Hold the key            → record while held, transcribe on release.
+//  With tapToStart off, every press is push-to-talk: release always finishes.
 
 public enum RecorderState: Equatable, Sendable {
     case idle, recording, transcribing
@@ -20,6 +21,9 @@ public struct GestureController: Sendable {
     /// Presses shorter than this are taps and keep recording hands-free;
     /// longer ones are push-to-talk and finish on release.
     public static let holdThreshold: Double = 0.5
+
+    /// The "Tap to start and stop" setting. Off means hold-only.
+    public var tapToStart = true
 
     public private(set) var held = false
     public private(set) var locked = false
@@ -66,7 +70,7 @@ public struct GestureController: Sendable {
             held = false
             if ignoreRelease { ignoreRelease = false; return [] }
             if locked || !owned { return [] }
-            if now - pressedAt < Self.holdThreshold {
+            if tapToStart && now - pressedAt < Self.holdThreshold {
                 locked = true
                 return []
             }

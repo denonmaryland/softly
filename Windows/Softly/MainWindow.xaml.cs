@@ -40,6 +40,9 @@ public partial class MainWindow : Window
         StatusText.Foreground = ready ? Green : Muted;
         StatusText.Text = ready ? "Ready to dictate" : state.StatusLine;
         SoundsSwitch.IsChecked = state.SoundsEnabled;
+        TapSwitch.IsChecked = state.TapToStart;
+        ShortcutSub.Text = state.TapToStart ? "Tap to start and stop · or hold to talk" : "Hold to talk · let go to finish";
+        HomeGestureText.Text = state.TapToStart ? "Tap to start, tap again to finish. Or hold to talk." : "Hold the key while you talk, then let go.";
         MediaSwitch.IsChecked = state.PauseMedia;
         ModelText.Text = state.ModelText;
         ModelText.Foreground = state.ModelStatus == Transcriber.Status.Ready ? Green : Muted;
@@ -130,6 +133,7 @@ public partial class MainWindow : Window
     // Preferences
 
     private void SoundsChanged(object sender, RoutedEventArgs e) => state.SoundsEnabled = SoundsSwitch.IsChecked == true;
+    private void TapChanged(object sender, RoutedEventArgs e) => state.TapToStart = TapSwitch.IsChecked == true;
     private void MediaChanged(object sender, RoutedEventArgs e) => state.PauseMedia = MediaSwitch.IsChecked == true;
 
     private void PreviewClick(object sender, RoutedEventArgs e) => state.PreviewPill();

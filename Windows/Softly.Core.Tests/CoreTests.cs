@@ -31,6 +31,15 @@ public class GestureControllerTests
     }
 
     [Fact]
+    public void HoldOnlyFinishesOnAnyRelease()
+    {
+        var c = new GestureController { TapToStart = false };
+        Eq(new[] { A.Start }, c.Send(E.Press, 0, S.Idle));
+        Eq(new[] { A.Stop }, c.Send(E.Release, 0.08, S.Recording));
+        Assert.False(c.Locked);
+    }
+
+    [Fact]
     public void SlowTapStillLatches()
     {
         var c = new GestureController();

@@ -50,6 +50,8 @@ Item {
     property bool soundsEnabled: true
     // Pill style id from Themes.js; "omarchy" follows the desktop theme.
     property string pillTheme: "omarchy"
+    // "Tap to start and stop"; off is hold-only.
+    property bool tapToStart: true
     readonly property var themeColors: Themes.named(pillTheme)
     // Shared with the bar popover (Panel.qml); edits there apply live.
     readonly property string settingsPath: ((Quickshell.env("XDG_CONFIG_HOME") || "").startsWith("/") ? Quickshell.env("XDG_CONFIG_HOME") : Quickshell.env("HOME") + "/.config") + "/omarchy/softly.json"
@@ -57,6 +59,7 @@ Item {
         try {
             const s = JSON.parse(text)
             root.soundsEnabled = s.sounds !== false
+            root.tapToStart = s.tapToStart !== false
             root.pillTheme = typeof s.pillTheme === "string" ? s.pillTheme : "omarchy"
         } catch (e) {}
     }
@@ -135,6 +138,7 @@ Item {
         selectedScreen = Quickshell.screens[0]
     }
     function handle(event) {
+        controller.tapToStart = tapToStart
         const actions = controller.send(event, Date.now(), daemon)
         locked = controller.locked
         held = controller.held
@@ -250,7 +254,7 @@ Item {
                 showing: root.showing, displayState: root.displayState, presence: root.presence,
                 surfaceOpacity: root.surfaceOpacity, contentPresence: root.contentPresence,
                 processingMix: root.processingMix, completionMix: root.completionMix, glyph: glyph.shape,
-                previewing: root.previewing, panelVisible: panel.visible, soundsEnabled: root.soundsEnabled, pillTheme: root.pillTheme, elapsed: root.elapsed, rms: root.rms,
+                previewing: root.previewing, panelVisible: panel.visible, soundsEnabled: root.soundsEnabled, tapToStart: root.tapToStart, pillTheme: root.pillTheme, elapsed: root.elapsed, rms: root.rms,
                 background: root.background.toString(), accent: root.accent.toString()})
         }
     }

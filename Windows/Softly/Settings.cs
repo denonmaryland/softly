@@ -35,6 +35,7 @@ public static class Settings
         public bool SoundsEnabled { get; set; } = true;
         public bool PauseMedia { get; set; } = true;
         public string PillTheme { get; set; } = "system";
+        public bool TapToStart { get; set; } = true;
         public List<string> Vocabulary { get; set; } = new(DefaultVocabulary);
     }
 
@@ -81,6 +82,13 @@ public static class Settings
     {
         get => Load().PauseMedia;
         set { Load().PauseMedia = value; Save(); }
+    }
+
+    /// <summary>Tap once to start hands-free and again to finish. Off is hold-only.</summary>
+    public static bool TapToStart
+    {
+        get => Load().TapToStart;
+        set { Load().TapToStart = value; Save(); }
     }
 
     /// <summary>The pill's style, an id from PillTheme.All.</summary>

@@ -19,6 +19,9 @@ final class AppState: ObservableObject {
     @Published var pauseMedia = Settings.pauseMedia {
         didSet { Settings.pauseMedia = pauseMedia }
     }
+    @Published var tapToStart = Settings.tapToStart {
+        didSet { Settings.tapToStart = tapToStart }
+    }
     @Published var pillTheme = Settings.pillTheme {
         didSet { Settings.pillTheme = pillTheme }
     }
