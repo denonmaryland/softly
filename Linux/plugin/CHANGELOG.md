@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0
+
+- Pick your speech model in the popover: Fast, Balanced (the default),
+  Accurate (Whisper large-v3-turbo) or Parakeet (NVIDIA Parakeet TDT v3
+  through Voxtype's ONNX build, fast on the CPU). Models download in the
+  background and the current one keeps working until the new one is ready.
+- Pick your language: English, detect automatically, or one of 15 others.
+- Fixes: "when Softly hears this, type that" rules, such as cloud code →
+  Claude Code. Leave the right side empty to drop a word like "um".
+- Say "submit" to send (off by default): end a dictation with "submit" and
+  Softly presses Enter after pasting.
+- Long dictations are transcribed while you talk, so stopping only leaves the
+  last few seconds to do.
+- The popover scrolls when it is taller than the screen.
+- Press Set up Softly in the popover once after updating: it installs the
+  new fix helper and the Voxtype settings that go with it.
+- The Mac and Windows apps get the same features, plus a recent dictations
+  menu.
+
 ## 0.2.12
 
 - No changes to the plugin; this version keeps it in step with the Mac and
