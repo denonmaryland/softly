@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.7
+
+- A lone modifier works as the dictation key: set the hotkey to Alt_R
+  (Right Alt), Super_R, Control_R or Shift_R and tap or hold it like F9.
+  The popover names it as "Right Alt" and so on.
+
 ## 0.2.6
 
 - New "Tap to start and stop" switch in the popover, on by default. Turn
