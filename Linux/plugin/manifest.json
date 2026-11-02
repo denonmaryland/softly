@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.denonmaryland.softly",
   "name": "Softly",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "author": "denonmaryland",
   "description": "Hold a key, speak, release: local Whisper dictation through Voxtype with a quiet backlit pill, plus a bar popover for sounds, vocabulary, recent transcripts and status.",
   "kinds": [
