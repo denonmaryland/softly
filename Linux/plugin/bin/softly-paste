@@ -7,7 +7,8 @@
 #   post_output_command = "~/.local/bin/softly-paste paste"  (after it copies the transcript)
 #
 # Paste follows Omarchy's universal paste rule: Ctrl+V for normal apps,
-# Shift+Insert for windows tagged "terminal". Keys go through Hyprland
+# Shift+Insert for windows tagged "terminal" and for terminal hosts such as
+# Herdr. Keys go through Hyprland
 # send_key_state instead of a virtual keyboard, which Electron apps such as
 # MonoCode ignored for Shift+Insert. The transcript stays on the clipboard,
 # including when no text field accepts the automatic paste.
@@ -20,6 +21,11 @@
 set -u
 
 state="${XDG_RUNTIME_DIR:-/tmp}/softly-paste"
+# Apps whose panes are terminals but whose windows Omarchy doesn't tag as one.
+# In Herdr, Ctrl+V reaches the CLI inside (Codex reads it as "paste an image"),
+# so it gets Shift+Insert like any terminal.
+terminal_hosts='["herdr-app"]'
+
 
 lua_key() {
   hyprctl dispatch "hl.dsp.send_key_state({ mods = \"$1\", key = \"$2\", state = \"$3\" })" 2>&1
@@ -77,7 +83,8 @@ paste() {
     exit 0
   fi
 
-  if hyprctl activewindow -j 2>/dev/null | jq -e '(.tags // []) | map(sub("\\*$"; "")) | index("terminal")' >/dev/null; then
+  if hyprctl activewindow -j 2>/dev/null | jq -e --argjson hosts "$terminal_hosts" \
+      '((.tags // []) | map(sub("\\*$"; "")) | index("terminal")) or (.class as $c | $hosts | index($c))' >/dev/null; then
     send_shortcut SHIFT Insert
   else
     send_shortcut CTRL V
