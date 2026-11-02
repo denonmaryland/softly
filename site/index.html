@@ -130,6 +130,7 @@
   .secondary { color: var(--ink); border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.03); }
   .secondary:hover { border-color: rgba(255,255,255,.26); background: rgba(255,255,255,.06); }
   .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  kbd { font: 500 .86em/1 var(--sans); color: var(--ink); border: 1px solid rgba(255,255,255,.16); border-bottom-width: 2px; border-radius: 6px; padding: 2px 7px 3px; background: rgba(255,255,255,.04); white-space: nowrap; }
   .fine { margin-top: 16px; font-size: 13px; line-height: 1.6; color: var(--faint); max-width: 36em; }
   .fine b { color: var(--muted); font-weight: 500; }
   code { font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); background: rgba(255,255,255,.05); padding: 2px 5px; border-radius: 4px; }
@@ -154,7 +155,7 @@
 
 <main>
   <h1>Talk instead<br>of <em>typing.</em></h1>
-  <p class="sub">Tap a key and talk, or hold it down, whichever you like. Softly types it wherever your cursor is, and it all runs on your own computer.</p>
+  <p class="sub">Tap <span id="key">a key</span> and talk, or hold it down, whichever you like. Softly types it wherever your cursor is, and it all runs on your own computer.</p>
 
   <div class="demo" aria-hidden="true">
     <div class="note">
@@ -196,7 +197,7 @@
   var ua = navigator.userAgent, platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
   var mobile = /iPhone|iPad|iPod|Android/i.test(ua) || (/Mac/.test(platform) && navigator.maxTouchPoints > 1);
   var btn = document.getElementById("download"), label = document.getElementById("download-label"),
-      icon = document.getElementById("os-icon"), fine = document.getElementById("fine");
+      icon = document.getElementById("os-icon"), fine = document.getElementById("fine"), key = document.getElementById("key");
   var apple = '<path fill="currentColor" stroke="none" d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.02-1.5-2.62-1.7-3.19-1.72-1.36-.14-2.65.8-3.34.8-.69 0-1.75-.78-2.88-.76-1.48.02-2.85.86-3.61 2.19-1.54 2.67-.39 6.62 1.11 8.79.73 1.06 1.6 2.25 2.75 2.2 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.71.71 2.88.69 1.19-.02 1.94-1.08 2.67-2.14.84-1.23 1.19-2.42 1.21-2.48-.03-.01-2.32-.89-2.33-3.55ZM14.2 6.13c.61-.74 1.02-1.76.91-2.78-.88.04-1.94.59-2.57 1.32-.56.65-1.06 1.69-.92 2.69.98.08 1.98-.5 2.58-1.23Z"/>';
   var windows = '<path fill="currentColor" stroke="none" d="M3 5.1l7.4-1v7.2H3V5.1Zm8.3-1.1L21 2.6v8.7h-9.7V4ZM3 12.7h7.4v7.2L3 18.9v-6.2Zm8.3 0H21v8.7l-9.7-1.4v-7.3Z"/>';
   var linux = '<path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/>';
@@ -205,12 +206,15 @@
     fine.innerHTML = "Softly is for <b>Mac</b>, <b>Windows</b> and <b>Omarchy Linux</b>.<br>Open this page on your computer to download it.";
   } else if (/Mac/i.test(platform) || /Macintosh/.test(ua)) {
     btn.href = base + "Softly-mac.dmg"; label.textContent = "Download for Mac"; icon.innerHTML = apple;
+    key.innerHTML = "<kbd>Right ⌥ Option</kbd>";
     fine.innerHTML = "For Apple silicon Macs on macOS 14 or later. The first time, open it from<br><b>System Settings → Privacy &amp; Security → Open Anyway</b>.";
   } else if (/Win/i.test(platform)) {
     btn.href = base + "Softly-windows.zip"; label.textContent = "Download for Windows"; icon.innerHTML = windows;
+    key.innerHTML = "<kbd>Right Alt</kbd>";
     fine.innerHTML = "For Windows 10 and 11. Unzip it and open <b>Softly</b>.<br>If Windows warns you, choose <b>More info → Run anyway</b>.";
   } else if (/Linux/i.test(platform)) {
     btn.href = base + "Softly-omarchy.zip"; label.textContent = "Download for Omarchy"; icon.innerHTML = linux;
+    key.innerHTML = "<kbd>F9</kbd> or <kbd>Right Alt</kbd>";
     fine.innerHTML = "An Omarchy plugin. Unzip it into <code>~/.config/omarchy/plugins</code>, then run<br><code>omarchy plugin enable io.github.denonmaryland.softly</code>";
   }
 
