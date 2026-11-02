@@ -156,9 +156,15 @@ same from the command line.
 
 #### Keeping permissions across rebuilds
 
-Ad-hoc signed builds can make macOS forget the Input Monitoring and
-Accessibility grants after each rebuild. To avoid that, create a local signing
-certificate once:
+Release builds are ad-hoc signed with a designated requirement of just the
+bundle identifier, so Input Monitoring and Accessibility grants survive
+updates. Builds from before 0.2.1 were tied to one exact binary: after
+updating from one of those, the switches in System Settings still look on but
+are ignored. Remove Softly from both lists (or run
+`tccutil reset ListenEvent com.denon.Softly` and
+`tccutil reset Accessibility com.denon.Softly`), relaunch, and grant once more.
+
+For local development you can instead sign with a certificate of your own:
 
 1. Open Keychain Access → Certificate Assistant → Create a Certificate…
 2. Name it **Softly Local**, Identity Type *Self Signed Root*,

@@ -34,19 +34,19 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/Sounds/*.wav "$APP/Contents/Resources/"
 
 codesign --force --sign "$IDENTITY" "$APP/Contents/Frameworks/whisper.framework"
-codesign --force --sign "$IDENTITY" "$APP"
+if [[ $IDENTITY == "-" ]]; then
+  # An ad-hoc signature's default designated requirement is the binary's hash,
+  # so macOS ties Input Monitoring and Accessibility grants to one exact build
+  # and every update silently orphans them (the switches stay on, the app is
+  # still refused). Requiring only the bundle identifier keeps the grants
+  # across updates.
+  codesign --force --sign - -r='designated => identifier "com.denon.Softly"' "$APP"
+else
+  codesign --force --sign "$IDENTITY" "$APP"
+fi
 codesign --verify --deep --strict "$APP"
 echo "Built $APP (signed: $IDENTITY)"
-if [[ $IDENTITY == "-" ]]; then
-  cat <<'NOTE'
-Ad-hoc signed: macOS may silently stop honouring the Input Monitoring and
-Accessibility grants after a rebuild (they still look enabled). If the hotkey
-stops working, reset them and grant again when prompted:
-  tccutil reset ListenEvent com.denon.Softly
-  tccutil reset Accessibility com.denon.Softly
-Creating the "Softly Local" certificate (see README) avoids this.
-NOTE
-fi
+codesign -d -r- "$APP" 2>&1 | tail -1
 
 if [[ ${1:-} == --install ]]; then
   mkdir -p "$HOME/Applications"
