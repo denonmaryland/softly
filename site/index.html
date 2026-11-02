@@ -155,7 +155,7 @@
 
 <main>
   <h1>Talk instead<br>of <em>typing.</em></h1>
-  <p class="sub">Tap <span id="key">a key you pick</span> and talk, or hold it down, whichever you like. Softly types it wherever your cursor is, and it all runs on your own computer.</p>
+  <p class="sub">Tap <span id="key">a key</span> and talk, or hold it down. You can change the key in settings. Softly types it wherever your cursor is, and it all runs on your own computer.</p>
 
   <div class="demo" aria-hidden="true">
     <div class="note">
@@ -206,15 +206,15 @@
     fine.innerHTML = "Softly is for <b>Mac</b>, <b>Windows</b> and <b>Omarchy Linux</b>.<br>Open this page on your computer to download it.";
   } else if (/Mac/i.test(platform) || /Macintosh/.test(ua)) {
     btn.href = base + "Softly-mac.dmg"; label.textContent = "Download for Mac"; icon.innerHTML = apple;
-    key.innerHTML = "<kbd>Right ⌥ Option</kbd> (or a key you pick)";
+    key.innerHTML = "<kbd>Right ⌥ Option</kbd>";
     fine.innerHTML = "For Apple silicon Macs on macOS 14 or later. The first time, open it from<br><b>System Settings → Privacy &amp; Security → Open Anyway</b>.";
   } else if (/Win/i.test(platform)) {
     btn.href = base + "Softly-windows.zip"; label.textContent = "Download for Windows"; icon.innerHTML = windows;
-    key.innerHTML = "<kbd>Right Alt</kbd> (or a key you pick)";
+    key.innerHTML = "<kbd>Right Alt</kbd>";
     fine.innerHTML = "For Windows 10 and 11. Unzip it and open <b>Softly</b>.<br>If Windows warns you, choose <b>More info → Run anyway</b>.";
   } else if (/Linux/i.test(platform)) {
     btn.href = base + "Softly-omarchy.zip"; label.textContent = "Download for Omarchy"; icon.innerHTML = linux;
-    key.innerHTML = "<kbd>F9</kbd> (or a key you pick)";
+    key.innerHTML = "<kbd>F9</kbd>";
     fine.innerHTML = "An Omarchy plugin. Unzip it into <code>~/.config/omarchy/plugins</code>, then run<br><code>omarchy plugin enable io.github.denonmaryland.softly</code>";
   }
 
