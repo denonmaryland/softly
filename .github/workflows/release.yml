@@ -12,8 +12,12 @@ jobs:
       - run: swift test
       - run: scripts/build-app.sh
       - run: ditto -c -k --keepParent "build/Softly.app" Softly-mac.zip
+      - name: Disk image for first installs (drag to Applications)
+        run: |
+          mkdir dmg && cp -R build/Softly.app dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname Softly -srcfolder dmg -ov -format UDZO Softly-mac.dmg
       - uses: actions/upload-artifact@v4
-        with: { name: mac, path: Softly-mac.zip }
+        with: { name: mac, path: "Softly-mac.*" }
   windows:
     runs-on: windows-latest
     steps:
@@ -41,6 +45,7 @@ jobs:
         with:
           files: |
             mac/Softly-mac.zip
+            mac/Softly-mac.dmg
             windows/Softly-windows.zip
             linux/Softly-omarchy.zip
           generate_release_notes: true
