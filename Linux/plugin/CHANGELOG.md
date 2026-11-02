@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.11
+
+- Saying nothing types nothing. Whisper turns near-silence into lines like
+  "Thanks for watching!"; a transcript that is only one of those is now
+  dropped and the clipboard left as it was. The same words inside real
+  speech are kept. The Mac and Windows apps get the same rule. Press Set up
+  Softly in the popover once after updating to install the new paste helper.
+
 ## 0.2.10
 
 - Dictation pastes into Herdr. Herdr's terminal panes ignored the Ctrl+V
