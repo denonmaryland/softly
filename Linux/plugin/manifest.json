@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.denonmaryland.softly",
   "name": "Softly",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "author": "denonmaryland",
   "description": "Tap a key, speak, tap again: local Whisper dictation through Voxtype with a quiet backlit pill, plus a bar popover for sounds, vocabulary, recent transcripts and status.",
   "kinds": [
