@@ -109,7 +109,8 @@ public sealed class DictationEngine
         }
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var text = await transcriber.TranscribeAsync(samples);
-        return $"{samples.Length / 16_000.0:0.0}s audio in {sw.Elapsed.TotalSeconds:0.00}s via {Backend}: {text ?? "(nothing)"}";
+        var fixedText = text == null ? null : Replacements.Apply(text, Settings.Replacements);
+        return $"{samples.Length / 16_000.0:0.0}s audio in {sw.Elapsed.TotalSeconds:0.00}s via {Backend}: {text ?? "(nothing)"} => {fixedText ?? "(nothing)"}";
     }
 
     /// <summary>Silent simulated cycle: never opens the microphone or pastes.</summary>
@@ -196,10 +197,13 @@ public sealed class DictationEngine
         Finish(text);
     }
 
-    private void Finish(string? text)
+    private void Finish(string? transcript)
     {
         State = RecorderState.Idle;
         controller.Send(GestureEvent.Reset, PillModel.Now, State);
+        // "Heard this, type that" fixes; a transcript that was all filler is dropped.
+        string? text = transcript == null ? null : Replacements.Apply(transcript, Settings.Replacements);
+        if (string.IsNullOrEmpty(text)) text = null;
         if (text == null)
         {
             HidePill();

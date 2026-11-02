@@ -1,17 +1,18 @@
 using System.IO;
 using System.Text.Json;
+using Softly.Core;
 
 namespace Softly;
 
 /// <summary>
 /// Recognition settings mirror the Mac app and the Linux Voxtype config
-/// (small.en Q5_1, English, four threads, vocabulary prompt). User options
+/// (English, four threads, vocabulary prompt); the model is picked in
+/// Preferences from SpeechModel.All. User options
 /// persist as JSON in %APPDATA%\Softly\settings.json.
 /// </summary>
 public static class Settings
 {
     public const string AppName = "Softly";
-    public const string ModelFileName = "ggml-small.en-q5_1.bin";
     public const string Language = "en";
     public const int Threads = 4;
     /// <summary>Recording cap, 15 minutes.</summary>
@@ -26,7 +27,7 @@ public static class Settings
     public static string SupportDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
     public static string ModelDirectory => Path.Combine(SupportDirectory, "Models");
-    public static string ModelPath => Path.Combine(ModelDirectory, ModelFileName);
+    public static string ModelPath => Softly.SpeechModel.Current.FilePath;
     private static string SettingsPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppName, "settings.json");
 
@@ -38,6 +39,8 @@ public static class Settings
         public bool TapToStart { get; set; } = true;
         public uint HotkeyVk { get; set; } = 0xA5;
         public List<string> Vocabulary { get; set; } = new(DefaultVocabulary);
+        public string SpeechModel { get; set; } = "balanced";
+        public List<Replacement> Replacements { get; set; } = new();
     }
 
     private static readonly object Gate = new();
@@ -110,6 +113,20 @@ public static class Settings
     {
         get => new(Load().Vocabulary);
         set { Load().Vocabulary = new List<string>(value); Save(); }
+    }
+
+    /// <summary>Id of the speech model in use, from SpeechModel.All.</summary>
+    public static string SpeechModel
+    {
+        get => Load().SpeechModel;
+        set { Load().SpeechModel = value; Save(); }
+    }
+
+    /// <summary>"Heard this, type that" fixes applied after transcription.</summary>
+    public static List<Replacement> Replacements
+    {
+        get => new(Load().Replacements ?? new());
+        set { Load().Replacements = new List<Replacement>(value); Save(); }
     }
 
     /// <summary>The vocabulary as Whisper's initial prompt; empty when there are no words.</summary>

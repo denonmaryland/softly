@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Softly.Core;
 
 namespace Softly;
 
@@ -22,6 +23,9 @@ public sealed class AppState : INotifyPropertyChanged
     private bool capturingHotkey;
     private string hotkeyNote = "";
     private List<string> vocabulary = Settings.Vocabulary;
+    private List<Replacement> replacements = Settings.Replacements;
+    private string speechModel = Settings.SpeechModel;
+    private string downloadingModel = "";
     private Updater.Phase updatePhase = Updater.Phase.Idle;
     private string updateVersion = "", updateError = "";
     private ModelDownloader.Phase downloadPhase = ModelDownloader.Phase.Idle;
@@ -75,6 +79,24 @@ public sealed class AppState : INotifyPropertyChanged
         set { if (Set(ref vocabulary, value, nameof(PromptText))) Settings.Vocabulary = value; }
     }
 
+    public List<Replacement> Replacements
+    {
+        get => replacements;
+        set { if (Set(ref replacements, value)) Settings.Replacements = value; }
+    }
+
+    /// <summary>Saved by the app once the model is on disk; pick with ChooseModel.</summary>
+    public string SpeechModel
+    {
+        get => speechModel;
+        set { if (Set(ref speechModel, value, nameof(ModelSubtitle), nameof(ModelActionText))) Settings.SpeechModel = value; }
+    }
+
+    /// <summary>Id of the model being downloaded; empty when none is.</summary>
+    public string DownloadingModel { get => downloadingModel; set => Set(ref downloadingModel, value); }
+
+    public string ModelSubtitle => Softly.SpeechModel.With(speechModel).Name + " · English · runs on this PC";
+
     public Updater.Phase UpdatePhase { get => updatePhase; set => Set(ref updatePhase, value, nameof(UpdateText)); }
     public string UpdateVersion { get => updateVersion; set => Set(ref updateVersion, value, nameof(UpdateText)); }
     public string UpdateError { get => updateError; set => Set(ref updateError, value, nameof(UpdateText)); }
@@ -87,6 +109,7 @@ public sealed class AppState : INotifyPropertyChanged
     public Action ReloadModel = () => { };
     public Action DownloadModel = () => { };
     public Action CancelDownload = () => { };
+    public Action<string> ChooseModel = _ => { };
     public Action PreviewPill = () => { };
     public Action<Hotkey> ApplyHotkey = _ => { };
     public Action CaptureHotkey = () => { };
@@ -146,7 +169,7 @@ public sealed class AppState : INotifyPropertyChanged
             ModelDownloader.Phase.Downloading => "Cancel",
             ModelDownloader.Phase.Verifying => "",
             ModelDownloader.Phase.Failed => "Try again",
-            _ => $"Download speech model ({ModelDownloader.SizeMB} MB)",
+            _ => $"Download speech model ({Softly.SpeechModel.With(speechModel).SizeMB} MB)",
         },
         _ => "",
     };

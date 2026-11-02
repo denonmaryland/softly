@@ -36,13 +36,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         state.poll = { [weak self] in self?.refresh() }
         state.showModelFolder = { [weak self] in self?.showModelFolder() }
         state.reloadModel = { [weak self] in self?.engine.loadModel() }
-        state.downloadModel = { [weak self] in self?.downloader.start() }
+        state.downloadModel = { [weak self] in self?.downloader.start(SpeechModel.current) }
         state.cancelDownload = { [weak self] in self?.downloader.cancel() }
+        state.chooseModel = { [weak self] id in self?.chooseModel(id) }
         downloader.onChange = { [weak self] in
             guard let self else { return }
             self.state.modelDownload = self.downloader.state
+            self.state.downloadingModel = self.downloader.model?.id
         }
-        downloader.onComplete = { [weak self] in self?.engine.loadModel() }
+        // A model picked in Preferences takes over once it is on disk.
+        downloader.onComplete = { [weak self] model in self?.useModel(model.id) }
         state.previewPill = { [weak self] in self?.engine.preview() }
         state.checkForUpdates = { [weak self] in self?.updater.check() }
         state.installUpdate = { [weak self] in self?.updater.install() }
@@ -66,6 +69,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !hotkeys.isRunning || !Permissions.microphoneGranted || !modelPresent {
             mainWindow.show()
         }
+    }
+
+    /// A downloaded model is switched to at once; otherwise it is fetched
+    /// first and the current one keeps working meanwhile.
+    private func chooseModel(_ id: String) {
+        let model = SpeechModel.with(id: id)
+        if model.isDownloaded {
+            if downloader.model != nil { downloader.cancel() }
+            useModel(id)
+        } else {
+            downloader.start(model)
+        }
+    }
+
+    private func useModel(_ id: String) {
+        state.speechModel = id
+        engine.loadModel()
     }
 
     /// Launching the app again (Finder, Launchpad, `open`) brings the window up.
@@ -195,7 +215,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         if engine.modelStatus != .ready {
             if engine.modelStatus == .missingModel {
-                menu.addItem(item("Download Speech Model (\(ModelDownloader.sizeMB) MB)", #selector(downloadModel)))
+                menu.addItem(item("Download Speech Model (\(SpeechModel.current.sizeMB) MB)", #selector(downloadModel)))
             }
             menu.addItem(item("Show Model Folder", #selector(showModelFolder)))
             menu.addItem(item("Reload Model", #selector(reloadModel)))
@@ -223,7 +243,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func installUpdate() { updater.install() }
     @objc private func toggleSounds() { state.soundsEnabled.toggle() }
     @objc private func reloadModel() { engine.loadModel() }
-    @objc private func downloadModel() { downloader.start(); mainWindow.show() }
+    @objc private func downloadModel() { downloader.start(SpeechModel.current); mainWindow.show() }
     @objc private func openInputMonitoring() { Permissions.openSettings("Privacy_ListenEvent") }
     @objc private func openAccessibility() { Permissions.openSettings("Privacy_Accessibility") }
     @objc private func openMicrophone() { Permissions.openSettings("Privacy_Microphone") }

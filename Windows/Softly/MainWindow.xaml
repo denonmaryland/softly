@@ -240,6 +240,45 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <TextBlock x:Name="PromptText" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,20,0,0" TextWrapping="Wrap"/>
+
+            <!-- "When Softly hears this, type that." -->
+            <TextBlock Text="Fix what it hears." FontSize="22" FontWeight="Bold" Foreground="{StaticResource Ink}" Margin="0,40,0,0"/>
+            <TextBlock Text="When Softly hears the phrase on the left, it types the one on the right. Leave the right side empty to drop a word, like “um”." FontSize="14" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+            <Grid Margin="0,20,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <Grid>
+                <TextBox x:Name="HeardBox" FontSize="15" Padding="8,6" BorderBrush="#C9D0D8" TextChanged="RuleDraftChanged" KeyDown="RuleKeyDown"/>
+                <TextBlock x:Name="HeardHint" Text="Heard, e.g. cloud code" FontSize="15" Foreground="{StaticResource Muted}" Margin="11,7,0,0" IsHitTestVisible="False"/>
+              </Grid>
+              <TextBlock Grid.Column="1" Text="→" FontSize="14" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="10,0"/>
+              <Grid Grid.Column="2">
+                <TextBox x:Name="TypedBox" FontSize="15" Padding="8,6" BorderBrush="#C9D0D8" TextChanged="RuleDraftChanged" KeyDown="RuleKeyDown"/>
+                <TextBlock x:Name="TypedHint" Text="Type, e.g. Claude Code" FontSize="15" Foreground="{StaticResource Muted}" Margin="11,7,0,0" IsHitTestVisible="False"/>
+              </Grid>
+              <Button x:Name="AddRuleButton" Grid.Column="3" Content="Add" Style="{StaticResource PlainButton}" Margin="10,0,0,0" Click="AddRule" IsEnabled="False"/>
+            </Grid>
+            <ItemsControl x:Name="RuleList" Margin="0,16,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="#E5E8EB" BorderThickness="0,0,0,1" Padding="0,12">
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Content="✕" FontSize="11" Width="24" Height="24" Style="{StaticResource LinkButton}" Foreground="#65707C" Tag="{Binding}" Click="RemoveRule" ToolTip="Remove"/>
+                      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding From}" FontSize="15" Foreground="#65707C"/>
+                        <TextBlock Text="  →  " FontSize="13" Foreground="#9AA3AD" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Shown}" FontSize="15" FontWeight="Medium" Foreground="#20252B"/>
+                      </StackPanel>
+                    </DockPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock x:Name="RulesEmpty" Text="No fixes yet." FontSize="13" Foreground="{StaticResource Muted}" Margin="0,16,0,0"/>
           </StackPanel>
 
           <!-- Preferences -->
@@ -288,7 +327,7 @@
                     <Button x:Name="ModelAction" Style="{StaticResource LinkButton}" Content="" Click="ModelActionClick" Visibility="Collapsed" HorizontalAlignment="Right"/>
                     <TextBlock x:Name="ModelNote" FontSize="11" Foreground="{StaticResource Ink2}" TextWrapping="Wrap" MaxWidth="260" TextAlignment="Right" Visibility="Collapsed"/>
                   </StackPanel>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Speech model" Style="{StaticResource RowTitle}"/><TextBlock Text="English · small model · runs on this PC" Style="{StaticResource RowSub}"/></StackPanel>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Speech model" Style="{StaticResource RowTitle}"/><TextBlock x:Name="ModelSub" Text="Balanced · English · runs on this PC" Style="{StaticResource RowSub}"/></StackPanel>
                 </DockPanel>
               </Border>
               <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
@@ -301,6 +340,8 @@
                 </DockPanel>
               </Border>
             </StackPanel>
+            <TextBlock Text="SPEECH MODEL" Style="{StaticResource Caption}" Margin="0,29,0,0"/>
+            <StackPanel x:Name="ModelList" Margin="0,10,0,0"/>
             <DockPanel Margin="0,29,0,0">
               <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" FontSize="13" Content="Preview" Click="PreviewClick"/>
               <TextBlock Text="PILL STYLE" Style="{StaticResource Caption}" VerticalAlignment="Center"/>

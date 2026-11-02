@@ -1,36 +1,38 @@
 import CryptoKit
 import Foundation
 
-/// Fetches the speech model into Application Support on first run, with
-/// progress, and verifies it before the engine loads it. The same file the
-/// Linux and Windows builds use.
+/// Fetches a speech model into Application Support, with progress, and
+/// verifies its SHA-256 before the engine loads it. Used on first run and
+/// when a model that is not on disk yet is picked in Preferences.
 @MainActor
 final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
     enum State: Equatable {
         case idle, downloading(Double), verifying, failed(String)
     }
 
-    nonisolated static let url = URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en-q5_1.bin")!
-    nonisolated static let sha1 = "20f54878d608f94e4a8ee3ae56016571d47cba34"
-    nonisolated static let sizeMB = 181
-
     private(set) var state: State = .idle { didSet { onChange() } }
+    /// The model being fetched, while state is downloading or verifying.
+    private(set) var model: SpeechModel?
     var onChange: () -> Void = {}
-    /// The file is in place and verified; the engine should load it.
-    var onComplete: () -> Void = {}
+    /// The file is in place and verified; the engine should switch to it.
+    var onComplete: (SpeechModel) -> Void = { _ in }
 
     private var session: URLSession?
     private var task: URLSessionDownloadTask?
     nonisolated(unsafe) private var lastStep = -1
 
-    func start() {
-        if case .downloading = state { return }
-        if state == .verifying { return }
+    /// Downloads the given model, replacing a download of another one.
+    func start(_ model: SpeechModel) {
+        if self.model == model, state == .verifying { return }
+        if self.model == model, case .downloading = state { return }
+        task?.cancel()
+        self.model = model
         lastStep = -1
         state = .downloading(0)
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         self.session = session
-        let task = session.downloadTask(with: Self.url)
+        let task = session.downloadTask(with: model.url)
+        task.taskDescription = model.id
         self.task = task
         task.resume()
     }
@@ -38,6 +40,7 @@ final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
     func cancel() {
         task?.cancel()
         task = nil
+        model = nil
         state = .idle
     }
 
@@ -56,6 +59,8 @@ final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
     nonisolated func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         // The temporary file is deleted when this returns, so move it first.
         let fm = FileManager.default
+        guard let id = downloadTask.taskDescription else { return }
+        let model = SpeechModel.with(id: id)
         let staging = fm.temporaryDirectory.appendingPathComponent("softly-model-\(UUID().uuidString).bin")
         do {
             try fm.moveItem(at: location, to: staging)
@@ -64,19 +69,20 @@ final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
             return
         }
         Task { @MainActor in self.state = .verifying }
-        guard Self.sha1Hex(of: staging) == Self.sha1 else {
+        guard Self.sha256Hex(of: staging) == model.sha256 else {
             try? fm.removeItem(at: staging)
             Task { @MainActor in self.state = .failed("The download did not verify. Try again.") }
             return
         }
         do {
             try fm.createDirectory(at: Settings.modelDirectory, withIntermediateDirectories: true)
-            let destination = Settings.modelDirectory.appendingPathComponent(Settings.modelFileName)
+            let destination = Settings.modelDirectory.appendingPathComponent(model.fileName)
             try? fm.removeItem(at: destination)
             try fm.moveItem(at: staging, to: destination)
             Task { @MainActor in
+                self.model = nil
                 self.state = .idle
-                self.onComplete()
+                self.onComplete(model)
             }
         } catch {
             try? fm.removeItem(at: staging)
@@ -90,10 +96,10 @@ final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
         Task { @MainActor in self.state = .failed(error.localizedDescription) }
     }
 
-    nonisolated private static func sha1Hex(of url: URL) -> String? {
+    nonisolated private static func sha256Hex(of url: URL) -> String? {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? handle.close() }
-        var hasher = Insecure.SHA1()
+        var hasher = SHA256()
         while let chunk = try? handle.read(upToCount: 4 << 20), !chunk.isEmpty {
             hasher.update(data: chunk)
         }

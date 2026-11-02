@@ -42,7 +42,7 @@ struct PreferencesView: View {
                     .pickerStyle(.menu)
                     .fixedSize()
                 }
-                PreferenceRow(title: "Speech model", subtitle: "English · small model · runs on this Mac") {
+                PreferenceRow(title: "Speech model", subtitle: "\(SpeechModel.current.name) · English · runs on this Mac") {
                     modelStatus
                 }
                 PreferenceRow(title: "Updates", subtitle: "Softly \(Updater.currentVersion) · checked quietly every few hours") {
@@ -50,6 +50,9 @@ struct PreferencesView: View {
                 }
             }
             .padding(.top, 26)
+
+            SpeechModelPicker(state: state)
+                .padding(.top, 29)
 
             PillStylePicker(selection: $state.pillTheme, preview: state.previewPill)
                 .padding(.top, 29)
@@ -164,6 +167,84 @@ struct PreferencesView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+}
+
+/// One row per speech model: name, what it is good at, and its size or
+/// download progress. Picking one that is not on disk downloads it first;
+/// the current model keeps working until it is ready.
+private struct SpeechModelPicker: View {
+    @ObservedObject var state: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Caption(text: "SPEECH MODEL")
+            VStack(spacing: 0) {
+                ForEach(SpeechModel.all) { model in
+                    row(model)
+                }
+            }
+        }
+    }
+
+    private func row(_ model: SpeechModel) -> some View {
+        let selected = model.id == state.speechModel
+        return Button {
+            if !selected { state.chooseModel(model.id) }
+        } label: {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 15))
+                    .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(model.name)
+                        .font(.system(size: 15, weight: .medium))
+                    Text(model.detail)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                trailing(model)
+                    .frame(width: 150, alignment: .trailing)
+            }
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .overlay(alignment: .bottom) { Divider() }
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func trailing(_ model: SpeechModel) -> some View {
+        if state.downloadingModel == model.id, case .downloading(let progress) = state.modelDownload {
+            HStack(spacing: 8) {
+                ProgressView(value: progress).frame(width: 70)
+                Text("\(Int(progress * 100))%")
+                    .font(.system(size: 12, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                Button("Cancel", action: state.cancelDownload)
+                    .buttonStyle(.link)
+                    .font(.system(size: 12))
+            }
+        } else if state.downloadingModel == model.id, state.modelDownload == .verifying {
+            Text("Verifying…")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+        } else if state.downloadingModel == model.id, case .failed = state.modelDownload {
+            Text("Download failed · Try again")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+        } else if model.isDownloaded {
+            Text(model.id == state.speechModel ? "In use" : "Downloaded")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+        } else {
+            Text("Download · \(model.sizeMB) MB")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.accentColor)
         }
     }
 }
@@ -288,7 +369,7 @@ struct ModelDownloadControl: View {
     var body: some View {
         switch state.modelDownload {
         case .idle:
-            Button("Download speech model (\(ModelDownloader.sizeMB) MB)", action: state.downloadModel)
+            Button("Download speech model (\(SpeechModel.current.sizeMB) MB)", action: state.downloadModel)
                 .buttonStyle(.link)
                 .font(.system(size: 14, weight: .medium))
         case .downloading(let progress):

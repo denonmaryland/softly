@@ -195,3 +195,59 @@ public class WaveformAndTranscriptTests
         Assert.Equal(20_000, Transcript.Padded(new float[20_000]).Length);
     }
 }
+
+// Same cases as ReplacementTests in Tests/DictationCoreTests.
+public class ReplacementTests
+{
+    private static readonly Replacement[] Rules =
+    {
+        new("cloud code", "Claude Code"),
+        new("cloud", "Claude"),
+        new("get hub", "GitHub"),
+        new("omarch", "Omarchy"),
+        new("um", ""),
+        new("uh", ""),
+    };
+
+    private static string Apply(string text) => Replacements.Apply(text, Rules);
+
+    [Fact]
+    public void PhrasesIgnoreCaseAndPreferTheLongestRule()
+    {
+        Assert.Equal("Open Claude Code and push to GitHub.", Apply("Open cloud code and push to Get Hub."));
+        Assert.Equal("Ask Claude.", Apply("Ask cloud."));
+        Assert.Equal("Claude Code", Apply("Cloud-code"));
+        Assert.Equal("Claude Code", Apply("cloud   code"));
+    }
+
+    [Fact]
+    public void OnlyWholeWordsMatch()
+    {
+        Assert.Equal("Omarchy runs on omarchy.", Apply("Omarch runs on omarchy."));
+        Assert.Equal("Cloudy and humid.", Apply("Cloudy and humid."));
+    }
+
+    [Fact]
+    public void ReplacementsAreNotReplacedAgain()
+    {
+        Assert.Equal("b a", Replacements.Apply("a b", new[] { new Replacement("a", "b"), new Replacement("b", "a") }));
+    }
+
+    [Fact]
+    public void EmptyTargetDeletesAndTidies()
+    {
+        Assert.Equal("So, I think it, works.", Apply("So, um, I think it, uh, works."));
+        Assert.Equal("I think so.", Apply("Um, I think so."));
+        Assert.Equal("Yes.", Apply("Yes um."));
+        Assert.Equal("", Apply("Um."));
+        Assert.Equal("Push it to GitHub. I think it works.", Apply("Push it to get hub. Um, I think it works."));
+        Assert.Equal("Done. So we ship.", Apply("Done. Uh, so we ship."));
+    }
+
+    [Fact]
+    public void NoRulesLeavesTextAlone()
+    {
+        Assert.Equal("  Untouched ,  text ", Replacements.Apply("  Untouched ,  text ", Array.Empty<Replacement>()));
+        Assert.Equal("Fine", Replacements.Apply("Fine", new[] { new Replacement("  ", "x") }));
+    }
+}

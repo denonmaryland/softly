@@ -1,4 +1,5 @@
 import AppKit
+import DictationCore
 import Combine
 
 /// What the window and the menu-bar menu show: model status, permissions
@@ -35,6 +36,15 @@ final class AppState: ObservableObject {
     @Published var vocabulary = Settings.vocabulary {
         didSet { Settings.vocabulary = vocabulary }
     }
+    @Published var replacements = Settings.replacements {
+        didSet { Settings.replacements = replacements }
+    }
+    /// Saved by the delegate once the model is on disk; pick with chooseModel.
+    @Published var speechModel = Settings.speechModel {
+        didSet { Settings.speechModel = speechModel }
+    }
+    /// Id of the model being downloaded, if any.
+    @Published var downloadingModel: String?
     @Published var update: Updater.State = .idle
     @Published var modelDownload: ModelDownloader.State = .idle
 
@@ -43,6 +53,7 @@ final class AppState: ObservableObject {
     var reloadModel: () -> Void = {}
     var downloadModel: () -> Void = {}
     var cancelDownload: () -> Void = {}
+    var chooseModel: (String) -> Void = { _ in }
     var previewPill: () -> Void = {}
     var applyHotkey: (Hotkey) -> Void = { _ in }
     var captureHotkey: () -> Void = {}

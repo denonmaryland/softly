@@ -12,7 +12,7 @@ public sealed class TrayIcon : IDisposable
     private readonly ToolStripMenuItem status = new() { Enabled = false };
     private readonly ToolStripMenuItem sounds = new("Play Sounds") { CheckOnClick = true };
     private readonly ToolStripMenuItem updates = new("Check for Updates…");
-    private readonly ToolStripMenuItem download = new($"Download Speech Model ({ModelDownloader.SizeMB} MB)");
+    private readonly ToolStripMenuItem download = new("Download Speech Model");
     private readonly ToolStripMenuItem modelFolder = new("Show Model Folder");
     private readonly ToolStripMenuItem reload = new("Reload Model");
     private readonly ToolStripSeparator modelSeparator = new();
@@ -58,6 +58,7 @@ public sealed class TrayIcon : IDisposable
         updates.Text = state.UpdatePhase == Updater.Phase.Available ? "Update to Softly " + state.UpdateVersion + "…" : "Check for Updates…";
         bool modelTrouble = state.ModelStatus != Transcriber.Status.Ready;
         modelFolder.Visible = reload.Visible = modelSeparator.Visible = modelTrouble;
+        download.Text = $"Download Speech Model ({SpeechModel.Current.SizeMB} MB)";
         download.Visible = state.ModelStatus == Transcriber.Status.MissingModel && state.DownloadPhase == ModelDownloader.Phase.Idle;
         icon.Icon = state.Ready ? readyIcon ??= Draw(false) : warnIcon ??= Draw(true);
         icon.Text = "Softly · " + state.StatusLine;

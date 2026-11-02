@@ -8,3 +8,4 @@ build/
 # Windows build output
 Windows/**/bin/
 Windows/**/obj/
+__pycache__/

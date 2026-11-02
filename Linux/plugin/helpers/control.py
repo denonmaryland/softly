@@ -8,6 +8,10 @@
     control.py add <word>            -> Voxtype whisper.initial_prompt, restart daemon
     control.py remove <word>         -> same
     control.py restart               -> restart the Voxtype daemon
+    control.py fix-add <heard> [type] -> "heard this, type that" fix (empty type drops it), softly.json
+    control.py fix-remove <heard>    -> same
+    control.py model <id>            -> speech model fast|balanced|accurate; downloads it first in the background
+    control.py cancel-download       -> stop that download
     control.py remember <file>       -> keep this transcript in the recent list
     control.py clear-recent          -> forget the recent list
     control.py check-update          -> compare the manifest version with the latest GitHub release
@@ -15,12 +19,15 @@
     control.py setup <key>           -> with the user's consent: paste helper, Voxtype output, Hyprland module
     control.py teardown              -> undo setup (settings and vocabulary stay)
 
-Sounds are read live by Service.qml from softly.json. The vocabulary is
+Sounds are read live by Service.qml from softly.json, and so are the fixes,
+by ~/.local/bin/softly-fix, Voxtype's post-process command. The vocabulary is
 Voxtype's own initial prompt ("A, B, C."), the same format the Mac app uses,
 so the two lists can be copied across by hand.
 """
+import hashlib
 import json
 import os
+import signal
 import re
 import shutil
 import subprocess
@@ -161,11 +168,14 @@ LOADER = ('do local d = debug.getinfo(1, "S").source:match("^@(.*/)") or os.gete
           'local p = d .. "softly.lua"; local f = io.open(p); if f then f:close(); dofile(p) end end ' + MARK)
 PASTE_SRC = os.path.join(PLUGIN_DIR, "bin", "softly-paste")
 PASTE_DEST = os.path.expanduser("~/.local/bin/softly-paste")
+FIX_SRC = os.path.join(PLUGIN_DIR, "bin", "softly-fix")
+FIX_DEST = os.path.expanduser("~/.local/bin/softly-fix")
 VOXTYPE_CONFIG = os.path.join(config_home(), "voxtype", "config.toml")
 VOXTYPE_KEYS = {
     "output.mode": "clipboard",
     "output.pre_output_command": PASTE_DEST + " save",
     "output.post_output_command": PASTE_DEST + " paste",
+    "output.post_process.command": FIX_DEST,
     "osd.enabled": "false",      # the pill replaces Voxtype's overlay
     "hotkey.enabled": "false",   # Hyprland drives it
 }
@@ -225,7 +235,7 @@ def voxtype_get(key):
 
 
 def setup_state():
-    paste_ok = os.path.exists(PASTE_DEST) and read_text(PASTE_DEST) == read_text(PASTE_SRC)
+    paste_ok = all(os.path.exists(d) and read_text(d) == read_text(s) for s, d in ((PASTE_SRC, PASTE_DEST), (FIX_SRC, FIX_DEST)))
     vox_ok = shutil.which("voxtype") is not None and all(voxtype_get(k) == v for k, v in VOXTYPE_KEYS.items())
     hypr_ok = MARK in read_text(HYPRLAND) and os.path.exists(MODULE)
     return {
@@ -251,11 +261,12 @@ def setup(hotkey):
     if run(["hyprctl", "version"])[0] != 0:
         return ["Hyprland is not running"]
     errors = []
-    # 1. The paste helper.
+    # 1. The paste and fix helpers.
     try:
         os.makedirs(os.path.dirname(PASTE_DEST), exist_ok=True)
-        shutil.copyfile(PASTE_SRC, PASTE_DEST)
-        os.chmod(PASTE_DEST, 0o755)
+        for src, dest in ((PASTE_SRC, PASTE_DEST), (FIX_SRC, FIX_DEST)):
+            shutil.copyfile(src, dest)
+            os.chmod(dest, 0o755)
     except OSError as e:
         return ["Could not install the paste helper: " + str(e)]
     # 2. Voxtype: clipboard output through the helper, its own overlay and hotkey off.
@@ -334,11 +345,12 @@ def teardown():
         for key in VOXTYPE_KEYS:
             run(["voxtype", "config", "unset", key])
         run(["systemctl", "--user", "restart", "voxtype"], timeout=30)
-    try:
-        if os.path.exists(PASTE_DEST):
-            os.remove(PASTE_DEST)
-    except OSError as e:
-        errors.append(str(e))
+    for dest in (PASTE_DEST, FIX_DEST):
+        try:
+            if os.path.exists(dest):
+                os.remove(dest)
+        except OSError as e:
+            errors.append(str(e))
     return errors
 
 
@@ -390,6 +402,196 @@ def save_words(words):
     return [] if code == 0 else [err or out or "Could not write the Voxtype config."]
 
 
+# ---------- "Heard this, type that" fixes ----------
+
+def current_fixes():
+    rules = read_settings().get("replacements", [])
+    if not isinstance(rules, list):
+        return []
+    return [{"from": str(r.get("from", "")), "to": str(r.get("to", ""))} for r in rules
+            if isinstance(r, dict) and str(r.get("from", "")).strip()]
+
+
+def save_fixes(rules):
+    settings = read_settings()
+    settings["replacements"] = rules
+    write_settings(settings)
+
+
+def add_fix(heard, typed):
+    heard = " ".join(heard.split())
+    if not heard:
+        return ["Say what Softly hears first."]
+    # A new fix for the same phrase replaces the old one.
+    rules = [r for r in current_fixes() if r["from"].lower() != heard.lower()]
+    save_fixes(rules + [{"from": heard, "to": typed.strip()}])
+    return []
+
+
+def remove_fix(heard):
+    save_fixes([r for r in current_fixes() if r["from"].lower() != heard.strip().lower()])
+    return []
+
+
+# ---------- Speech models ----------
+# Same files, ids and checksums as SpeechModel.swift and SpeechModel.cs. They
+# go in Voxtype's models folder and whisper.model points at the chosen one.
+
+MODELS = [
+    {"id": "fast", "name": "Fast", "detail": "Smallest and quickest", "file": "ggml-base.en-q5_1.bin",
+     "sha256": "4baf70dd0d7c4247ba2b81fafd9c01005ac77c2f9ef064e00dcf195d0e2fdd2f", "sizeMB": 60},
+    {"id": "balanced", "name": "Balanced", "detail": "The default", "file": "ggml-small.en-q5_1.bin",
+     "sha256": "bfdff4894dcb76bbf647d56263ea2a96645423f1669176f4844a1bf8e478ad30", "sizeMB": 190},
+    {"id": "accurate", "name": "Accurate", "detail": "Best with names and code", "file": "ggml-large-v3-turbo-q5_0.bin",
+     "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2", "sizeMB": 574},
+]
+MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/"
+DOWNLOAD = os.path.join(os.path.dirname(RECENT), "download.json")
+
+
+def models_dir():
+    x = os.environ.get("XDG_DATA_HOME", "")
+    base = x if x.startswith("/") else os.path.expanduser("~/.local/share")
+    return os.path.join(base, "voxtype", "models")
+
+
+def model_by_id(model_id):
+    return next((m for m in MODELS if m["id"] == model_id), None)
+
+
+def current_model_id(model_setting):
+    name = os.path.basename(model_setting or "")
+    return next((m["id"] for m in MODELS if m["file"] == name), "")
+
+
+def read_download():
+    try:
+        with open(DOWNLOAD) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    # A download whose process died (logout, crash) is not still running.
+    if data.get("phase") in ("downloading", "verifying"):
+        try:
+            os.kill(int(data.get("pid", 0)), 0)
+        except (OSError, ValueError):
+            return None
+    return data
+
+
+def write_download(data):
+    os.makedirs(os.path.dirname(DOWNLOAD), mode=0o700, exist_ok=True)
+    tmp = DOWNLOAD + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f)
+    os.replace(tmp, DOWNLOAD)
+
+
+def use_model(model):
+    path = os.path.join(models_dir(), model["file"])
+    code, out, err = run(["voxtype", "config", "set", "whisper.model", path])
+    if code != 0:
+        return [err or out or "Could not write the Voxtype config."]
+    return restart()
+
+
+def choose_model(model_id):
+    model = model_by_id(model_id)
+    if not model:
+        return ["Unknown speech model: " + model_id]
+    if os.path.exists(os.path.join(models_dir(), model["file"])):
+        cancel_download()
+        return use_model(model)
+    current = read_download()
+    if current and current.get("id") == model_id and current.get("phase") in ("downloading", "verifying"):
+        return []
+    cancel_download()
+    # The download outlives this call (the popover waits on it), so it runs on its own.
+    child = subprocess.Popen([sys.executable, os.path.abspath(__file__), "download-model", model_id],
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+    write_download({"id": model_id, "phase": "downloading", "progress": 0, "pid": child.pid})
+    return []
+
+
+def cancel_download():
+    current = read_download()
+    if current and current.get("phase") in ("downloading", "verifying"):
+        try:
+            os.kill(int(current.get("pid", 0)), signal.SIGTERM)
+        except (OSError, ValueError):
+            pass
+    try:
+        os.remove(DOWNLOAD)
+    except OSError:
+        pass
+    return []
+
+
+def download_model(model_id):
+    """Runs detached: fetch, verify, switch Voxtype over, restart it."""
+    model = model_by_id(model_id)
+    if not model:
+        return
+    pid = os.getpid()
+    dest = os.path.join(models_dir(), model["file"])
+    part = dest + ".part"
+
+    def report(phase, progress=0.0, error=""):
+        write_download({"id": model_id, "phase": phase, "progress": round(progress, 3), "error": error, "pid": pid})
+
+    def stop(*_):
+        try:
+            os.remove(part)
+        except OSError:
+            pass
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, stop)
+    report("downloading")
+    try:
+        os.makedirs(models_dir(), exist_ok=True)
+        req = urllib.request.Request(MODEL_URL + model["file"], headers={"User-Agent": "Softly/" + plugin_version() + " (Omarchy)"})
+        digest = hashlib.sha256()
+        with urllib.request.urlopen(req, timeout=30) as r, open(part, "wb") as f:
+            total = int(r.headers.get("Content-Length") or 0)
+            done, last = 0, -1
+            while True:
+                chunk = r.read(1 << 16)
+                if not chunk:
+                    break
+                f.write(chunk)
+                digest.update(chunk)
+                done += len(chunk)
+                step = int(done * 100 / total) if total else 0
+                if step != last:
+                    last = step
+                    report("downloading", done / total if total else 0)
+        report("verifying", 1)
+        if digest.hexdigest() != model["sha256"]:
+            os.remove(part)
+            report("failed", 0, "The download did not verify. Try again.")
+            return
+        os.replace(part, dest)
+    except Exception as e:  # network, disk
+        try:
+            os.remove(part)
+        except OSError:
+            pass
+        report("failed", 0, str(e))
+        return
+    errors = use_model(model)
+    if errors:
+        report("failed", 0, errors[0])
+    else:
+        try:
+            os.remove(DOWNLOAD)
+        except OSError:
+            pass
+
+
 def restart():
     code, _, err = run(["systemctl", "--user", "restart", "voxtype"], timeout=30)
     return [] if code == 0 else [err or "Could not restart Voxtype."]
@@ -401,6 +603,7 @@ def state(errors=None):
     code, daemon, _ = run(["voxtype", "status"])
     _, model, _ = run(["voxtype", "config", "get", "whisper.model"])
     errors = errors or []
+    folder = models_dir()
     return {
         "ok": not errors,
         "errors": errors,
@@ -411,6 +614,11 @@ def state(errors=None):
         "service": active or "unknown",
         "daemon": daemon if code == 0 and daemon else "unknown",
         "model": os.path.basename(model) if model else "",
+        "speechModel": current_model_id(model),
+        "models": [{"id": m["id"], "name": m["name"], "detail": m["detail"], "sizeMB": m["sizeMB"],
+                    "downloaded": os.path.exists(os.path.join(folder, m["file"]))} for m in MODELS],
+        "download": read_download(),
+        "replacements": current_fixes(),
         "recent": read_recent(),
         "version": plugin_version(),
         "setup": setup_state(),
@@ -445,6 +653,17 @@ def main(argv):
         word = argv[2].strip()
         words = [w for w in current_words() if w.lower() != word.lower()]
         errors = save_words(words) or restart()
+    elif cmd == "fix-add" and len(argv) in (3, 4):
+        errors = add_fix(argv[2], argv[3] if len(argv) == 4 else "")
+    elif cmd == "fix-remove" and len(argv) == 3:
+        errors = remove_fix(argv[2])
+    elif cmd == "model" and len(argv) == 3:
+        errors = choose_model(argv[2])
+    elif cmd == "cancel-download":
+        errors = cancel_download()
+    elif cmd == "download-model" and len(argv) == 3:
+        download_model(argv[2])
+        return 0
     elif cmd == "restart":
         errors = restart()
     elif cmd == "remember" and len(argv) == 3:

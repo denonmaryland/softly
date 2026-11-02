@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Softly's "heard this, type that" fixes for Voxtype.
+
+Installed to ~/.local/bin/softly-fix by the plugin's Set up, which points
+Voxtype's output.post_process.command at it: the transcript arrives on stdin
+and the fixed text goes to stdout. Rules live in ~/.config/omarchy/softly.json
+under "replacements" ([{"from": "cloud code", "to": "Claude Code"}, ...]) and
+are edited in the bar popover.
+
+Same rules as Sources/DictationCore/Replacements.swift and
+Windows/Softly.Core/Replacements.cs: matching ignores case and only takes
+whole words; spaces in a rule match any run of spaces or hyphens; the longest
+rule wins; an empty "to" deletes the phrase and tidies the punctuation left
+behind. Any failure prints the transcript unchanged.
+"""
+import json
+import os
+import re
+import sys
+
+# Not preceded or followed by a letter or digit (Python's re has no \p{L}).
+BEFORE = r"(?<![^\W_])"
+AFTER = r"(?![^\W_])"
+
+
+def settings_path():
+    x = os.environ.get("XDG_CONFIG_HOME", "")
+    base = x if x.startswith("/") else os.path.expanduser("~/.config")
+    return os.path.join(base, "omarchy", "softly.json")
+
+
+def load_rules():
+    try:
+        with open(settings_path()) as f:
+            data = json.load(f)
+        rules = data.get("replacements", []) if isinstance(data, dict) else []
+        return [(str(r.get("from", "")), str(r.get("to", ""))) for r in rules if isinstance(r, dict)]
+    except (OSError, ValueError):
+        return []
+
+
+def key(phrase):
+    return re.sub(r"[\s-]+", " ", phrase.lower()).strip()
+
+
+def apply(text, rules):
+    usable = {}
+    for frm, to in rules:
+        frm = re.sub(r"\s+", " ", frm).strip()
+        if frm:
+            usable[key(frm)] = (frm, to.strip())  # the later rule wins
+    if not usable or not text:
+        return text
+    ordered = sorted(usable.values(), key=lambda r: len(r[0]), reverse=True)
+    by_key = {key(frm): to for frm, to in ordered}
+    alternatives = [r"[\s-]+".join(re.escape(w) for w in frm.split(" ")) for frm, _ in ordered]
+    pattern = re.compile(BEFORE + "(?:" + "|".join(alternatives) + ")" + AFTER, re.IGNORECASE)
+    deleted = False
+
+    def swap(m):
+        nonlocal deleted
+        to = by_key.get(key(m.group(0)), m.group(0))
+        if not to:
+            deleted = True
+        return to
+
+    result = pattern.sub(swap, text)
+    return tidy(result, text) if deleted else result
+
+
+def tidy(text, original):
+    """Cleans up after a deleted word: "So, um, yes" reads "So, yes"."""
+    s = re.sub(r"\s+", " ", text)
+    s = re.sub(r"\s+([,.!?;:])", r"\1", s)
+    s = re.sub(r",\s*,", ",", s)
+    s = re.sub(r"([.!?])[,;:]+", r"\1", s)
+    s = re.sub(r"([.!?]\s+)(\w)", lambda m: m.group(1) + (m.group(2).upper() if m.group(2).islower() else m.group(2)), s)
+    s = re.sub(r"^[\s,;:.!?]+", "", s).strip()
+    first = original.strip()[:1]
+    if s and s[0].islower() and first and not first.islower():
+        s = s[0].upper() + s[1:]
+    return s
+
+
+def main():
+    text = sys.stdin.read()
+    try:
+        out = apply(text.strip(), load_rules())
+    except Exception:  # never lose a dictation over a bad rule
+        out = text
+    sys.stdout.write(out)
+
+
+if __name__ == "__main__":
+    main()

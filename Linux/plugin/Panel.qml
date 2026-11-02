@@ -6,10 +6,11 @@ import qs.Commons
 import "Themes.js" as Themes
 
 // Softly settings: the Linux counterpart of the Mac app's window,
-// in Omarchy's own idiom (a bar icon and a popover). Sounds live in
-// ~/.config/omarchy/softly.json, which Service.qml reads live; the
-// vocabulary is Voxtype's whisper.initial_prompt, written through
-// helpers/control.py, which restarts the daemon.
+// in Omarchy's own idiom (a bar icon and a popover). Sounds and fixes live
+// in ~/.config/omarchy/softly.json, read live by Service.qml and by
+// ~/.local/bin/softly-fix; the vocabulary is Voxtype's
+// whisper.initial_prompt and the speech model its whisper.model, both
+// written through helpers/control.py, which restarts the daemon.
 Panel {
   id: root
   moduleName: "io.github.denonmaryland.softly"
@@ -36,6 +37,12 @@ Panel {
   property string service: "unknown"
   property string daemon: "unknown"
   property string model: ""
+  property string speechModel: ""  // fast | balanced | accurate, "" for a model Softly did not pick
+  property var models: []          // [{id, name, detail, sizeMB, downloaded}]
+  property var download: null      // {id, phase, progress, error} while a model downloads
+  property var fixes: []           // [{from, to}]
+  property string heardDraft: ""
+  property string typedDraft: ""
   property var recent: []       // [{text, at}], newest first
   property string version: ""
   property var setup: null      // {paste, voxtype, hypr, complete, hotkey, voxtypeInstalled}
@@ -80,6 +87,10 @@ Panel {
       service = s.service || "unknown"
       daemon = s.daemon || "unknown"
       model = s.model || ""
+      speechModel = s.speechModel || ""
+      models = s.models || []
+      download = s.download || null
+      fixes = s.replacements || []
       recent = s.recent || []
       version = s.version || ""
       setup = s.setup || null
@@ -88,6 +99,7 @@ Panel {
       else if (message.indexOf("Saving") === 0) message = "Saved · Voxtype restarted"
       else if (message.indexOf("Setting up") === 0) message = setup && setup.complete ? "Set up · hold " + hotkey + " to dictate" : "Setup did not finish"
       else if (message.indexOf("Removing") === 0) message = "Softly's setup was removed"
+      else if (message.indexOf("Switching model") === 0) message = "Saved · Voxtype restarted"
       else if (message.indexOf("Switching") === 0) message = ""
     } catch (e) { message = "Could not read dictation settings." }
   }
@@ -145,6 +157,23 @@ Panel {
     message = "Saving and restarting Voxtype…"
     send(["remove", w])
   }
+  function chooseModel(id) {
+    if (id === speechModel && !download) return
+    const m = models.find(x => x.id === id)
+    message = m && m.downloaded ? "Switching model and restarting Voxtype…" : ""
+    send(["model", id])
+  }
+  function cancelDownload() { download = null; send(["cancel-download"]) }
+  function addFix() {
+    const heard = heardDraft.trim()
+    if (!heard) return
+    const typed = typedDraft.trim()
+    heardField.text = ""; typedField.text = ""
+    heardDraft = ""; typedDraft = ""
+    message = ""
+    send(["fix-add", heard, typed])
+  }
+  function removeFix(heard) { message = ""; send(["fix-remove", heard]) }
   function preview() { Quickshell.execDetached(["omarchy-shell", "io.github.denonmaryland.softly", "preview"]) }
   function copyText(t) { Quickshell.execDetached(["wl-copy", "--", t]); message = "Copied" }
   function clearRecent() { recent = []; send(["clear-recent"]) }
@@ -237,7 +266,7 @@ Panel {
       id: keyboard
       parent: root.popup ? root.popup.slot : parking
       anchors.fill: parent
-      blocked: wordField.activeFocus
+      blocked: wordField.activeFocus || heardField.activeFocus || typedField.activeFocus
       onCloseRequested: root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onMoveRequested: function(dx, dy) {
@@ -247,9 +276,19 @@ Panel {
       }
       onActivateRequested: root.activate()
 
+      // The popover is capped at the screen's height; the rest scrolls.
+      Flickable {
+        id: scroller
+        anchors.fill: parent
+        contentWidth: width
+        contentHeight: content.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: contentHeight > height
+
       Column {
         id: content
-        width: parent.width
+        width: scroller.width
         spacing: Style.space(12)
 
         // ---------- Header: title and live status ----------
@@ -555,6 +594,72 @@ Panel {
           }
         }
 
+        // ---------- Speech model: three sizes of the same engine ----------
+        Column {
+          width: parent.width
+          spacing: Style.space(8)
+          Column {
+            width: parent.width
+            spacing: Style.space(2)
+            Text { text: "Speech model"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body }
+            Text {
+              width: parent.width; wrapMode: Text.WordWrap
+              text: root.download && root.download.phase === "failed" ? "Download failed · " + (root.download.error || "try again")
+                : root.speechModel === "" && root.model ? root.model.replace(/^ggml-/, "").replace(/\.bin$/, "") + " · set in Voxtype"
+                : "Accurate is best with names and code; Fast is lightest. Others download once."
+              color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
+            }
+          }
+          Row {
+            id: modelChips
+            width: parent.width
+            spacing: Style.space(6)
+            readonly property real cell: Math.floor((width - 2 * spacing) / 3)
+            Repeater {
+              model: root.models
+              delegate: Rectangle {
+                id: mchip
+                required property var modelData
+                readonly property bool selected: modelData.id === root.speechModel
+                readonly property bool fetching: !!(root.download && root.download.id === modelData.id && root.download.phase !== "failed")
+                width: modelChips.cell; height: Style.space(42); radius: Style.space(8)
+                color: root.alphaOf(root.fg, mchipMouse.containsMouse ? 0.1 : 0.05)
+                border.width: selected ? 2 : 1
+                border.color: selected ? root.accent : root.alphaOf(root.fg, 0.14)
+                Column {
+                  anchors.centerIn: parent
+                  spacing: Style.space(1)
+                  Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: mchip.modelData.name
+                    color: root.fg
+                    opacity: mchip.selected ? 1 : 0.8
+                    font.family: root.family; font.pixelSize: Style.font.caption
+                    font.weight: mchip.selected ? Font.DemiBold : Font.Normal
+                  }
+                  Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: mchip.fetching ? (root.download.phase === "verifying" ? "Verifying…" : Math.round((root.download.progress || 0) * 100) + "% · cancel")
+                      : mchip.selected ? "In use"
+                      : mchip.modelData.downloaded ? "Ready"
+                      : mchip.modelData.sizeMB + " MB"
+                    color: root.fg
+                    opacity: 0.5
+                    font.family: root.family; font.pixelSize: Style.font.caption - 1
+                  }
+                }
+                MouseArea {
+                  id: mchipMouse
+                  anchors.fill: parent
+                  hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                  enabled: root.loaded && !root.busy
+                  onClicked: mchip.fetching ? root.cancelDownload() : root.chooseModel(mchip.modelData.id)
+                }
+              }
+            }
+          }
+        }
+
         PanelSeparator { foreground: root.fg }
 
         // ---------- Recent dictations (runtime only; gone at logout) ----------
@@ -740,6 +845,117 @@ Panel {
 
         PanelSeparator { foreground: root.fg }
 
+        // ---------- Fixes: "when Softly hears this, type that" ----------
+        Column {
+          width: parent.width
+          spacing: Style.space(3)
+          Text {
+            text: "FIXES"
+            color: root.fg
+            opacity: 0.6
+            font.family: root.family
+            font.pixelSize: Style.font.caption
+            font.weight: Font.DemiBold
+          }
+          Text {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: "When Softly hears the left side, it types the right. Leave the right empty to drop a word, like “um”. Applied straight away."
+            color: root.fg
+            opacity: 0.6
+            font.family: root.family
+            font.pixelSize: Style.font.caption
+          }
+        }
+        Row {
+          width: parent.width
+          spacing: Style.space(6)
+          TextField {
+            id: heardField
+            width: (parent.width - fixAddButton.width - arrowText.width - 3 * parent.spacing) / 2
+            foreground: root.fg
+            placeholderText: "Heard"
+            onTextChanged: root.heardDraft = text
+            onAccepted: typedField.forceActiveFocus()
+            Keys.onPressed: function(event) {
+              if (event.key === Qt.Key_Escape) { keyboard.forceActiveFocus(); event.accepted = true }
+            }
+          }
+          Text {
+            id: arrowText
+            anchors.verticalCenter: parent.verticalCenter
+            text: "→"
+            color: root.fg; opacity: 0.5
+            font.family: root.family; font.pixelSize: Style.font.body
+          }
+          TextField {
+            id: typedField
+            width: heardField.width
+            foreground: root.fg
+            placeholderText: "Type"
+            onTextChanged: root.typedDraft = text
+            onAccepted: root.addFix()
+            Keys.onPressed: function(event) {
+              if (event.key === Qt.Key_Escape) { keyboard.forceActiveFocus(); event.accepted = true }
+            }
+          }
+          Button {
+            id: fixAddButton
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Add"
+            foreground: root.fg
+            fontFamily: root.family
+            bordered: true
+            enabled: root.heardDraft.trim().length > 0 && !root.busy
+            onClicked: root.addFix()
+          }
+        }
+        Column {
+          width: parent.width
+          spacing: 0
+          Repeater {
+            model: root.fixes
+            delegate: Item {
+              required property var modelData
+              width: content.width
+              height: Style.space(20)
+              Text {
+                anchors.left: parent.left
+                anchors.right: fixRemove.left
+                anchors.rightMargin: Style.space(8)
+                anchors.verticalCenter: parent.verticalCenter
+                elide: Text.ElideRight
+                text: parent.modelData.from + "  →  " + (parent.modelData.to || "(removed)")
+                color: root.fg
+                font.family: root.family
+                font.pixelSize: Style.font.body
+              }
+              PanelActionButton {
+                id: fixRemove
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                iconText: "󰅖"
+                tooltipText: "Remove"
+                foreground: root.fg
+                fontFamily: root.family
+                fontSize: Style.font.caption
+                enabled: !root.busy
+                onClicked: root.removeFix(parent.modelData.from)
+              }
+            }
+          }
+        }
+        Text {
+          visible: root.loaded && root.fixes.length === 0
+          text: "No fixes yet."
+          color: root.fg
+          opacity: 0.6
+          font.family: root.family
+          font.pixelSize: Style.font.caption
+        }
+
+        PanelSeparator { foreground: root.fg }
+
         // ---------- Footer: preview and model ----------
         Button {
           text: "Preview pill"
@@ -801,6 +1017,7 @@ Panel {
           font.family: root.family
           font.pixelSize: Style.font.caption
         }
+      }
       }
     }
 

@@ -151,3 +151,47 @@ final class WaveformAndTranscriptTests: XCTestCase {
         XCTAssertEqual(Transcript.padded([Float](repeating: 0, count: 20_000)).count, 20_000)
     }
 }
+
+// Same cases as ReplacementTests in Windows/Softly.Core.Tests.
+final class ReplacementTests: XCTestCase {
+    private let rules = [
+        Replacement(from: "cloud code", to: "Claude Code"),
+        Replacement(from: "cloud", to: "Claude"),
+        Replacement(from: "get hub", to: "GitHub"),
+        Replacement(from: "omarch", to: "Omarchy"),
+        Replacement(from: "um", to: ""),
+        Replacement(from: "uh", to: ""),
+    ]
+
+    private func apply(_ text: String) -> String { Replacements.apply(text, rules) }
+
+    func testPhrasesIgnoreCaseAndPreferTheLongestRule() {
+        XCTAssertEqual(apply("Open cloud code and push to Get Hub."), "Open Claude Code and push to GitHub.")
+        XCTAssertEqual(apply("Ask cloud."), "Ask Claude.")
+        XCTAssertEqual(apply("Cloud-code"), "Claude Code")
+        XCTAssertEqual(apply("cloud   code"), "Claude Code")
+    }
+
+    func testOnlyWholeWordsMatch() {
+        XCTAssertEqual(apply("Omarch runs on omarchy."), "Omarchy runs on omarchy.")
+        XCTAssertEqual(apply("Cloudy and humid."), "Cloudy and humid.")
+    }
+
+    func testReplacementsAreNotReplacedAgain() {
+        XCTAssertEqual(Replacements.apply("a b", [Replacement(from: "a", to: "b"), Replacement(from: "b", to: "a")]), "b a")
+    }
+
+    func testEmptyTargetDeletesAndTidies() {
+        XCTAssertEqual(apply("So, um, I think it, uh, works."), "So, I think it, works.")
+        XCTAssertEqual(apply("Um, I think so."), "I think so.")
+        XCTAssertEqual(apply("Yes um."), "Yes.")
+        XCTAssertEqual(apply("Um."), "")
+        XCTAssertEqual(apply("Push it to get hub. Um, I think it works."), "Push it to GitHub. I think it works.")
+        XCTAssertEqual(apply("Done. Uh, so we ship."), "Done. So we ship.")
+    }
+
+    func testNoRulesLeavesTextAlone() {
+        XCTAssertEqual(Replacements.apply("  Untouched ,  text ", []), "  Untouched ,  text ")
+        XCTAssertEqual(Replacements.apply("Fine", [Replacement(from: "  ", to: "x")]), "Fine")
+    }
+}

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Softly.Core;
 
 namespace Softly;
 
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
             Hide();
         };
         BuildThemeSwatches();
+        BuildModelRows();
         Bind();
     }
 
@@ -72,6 +74,10 @@ public partial class MainWindow : Window
             label.Foreground = selected ? (Brush)FindResource("Ink") : Muted;
         }
         WordList.ItemsSource = state.Vocabulary;
+        RuleList.ItemsSource = state.Replacements.Select(r => new RuleRow(r)).ToList();
+        RulesEmpty.Visibility = state.Replacements.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ModelSub.Text = state.ModelSubtitle;
+        BindModelRows();
         PromptText.Text = state.PromptText;
         VersionText.Text = "Softly " + Updater.CurrentVersion + " · checked quietly every few hours";
         UpdateAction.Content = state.UpdateText;
@@ -139,6 +145,46 @@ public partial class MainWindow : Window
         state.Vocabulary = words;
     }
 
+    /// <summary>One row of the fixes list; an empty "to" reads "(removed)".</summary>
+    private sealed record RuleRow(Replacement Rule)
+    {
+        public string From => Rule.From;
+        public string Shown => Rule.To.Length == 0 ? "(removed)" : Rule.To;
+    }
+
+    private void RuleDraftChanged(object sender, TextChangedEventArgs e)
+    {
+        HeardHint.Visibility = HeardBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        TypedHint.Visibility = TypedBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        AddRuleButton.IsEnabled = HeardBox.Text.Trim().Length > 0;
+    }
+
+    private void RuleKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { AddRule(sender, e); e.Handled = true; }
+    }
+
+    private void AddRule(object sender, RoutedEventArgs e)
+    {
+        var from = HeardBox.Text.Trim();
+        if (from.Length == 0) return;
+        var rules = state.Replacements;
+        // A new fix for the same phrase replaces the old one.
+        rules.RemoveAll(r => string.Equals(r.From, from, StringComparison.OrdinalIgnoreCase));
+        rules.Add(new Replacement(from, TypedBox.Text.Trim()));
+        state.Replacements = rules;
+        HeardBox.Text = TypedBox.Text = "";
+        HeardBox.Focus();
+    }
+
+    private void RemoveRule(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not RuleRow row) return;
+        var rules = state.Replacements;
+        rules.RemoveAll(r => r == row.Rule);
+        state.Replacements = rules;
+    }
+
     // Preferences
 
     private void SoundsChanged(object sender, RoutedEventArgs e) => state.SoundsEnabled = SoundsSwitch.IsChecked == true;
@@ -204,6 +250,63 @@ public partial class MainWindow : Window
             };
             ThemeGrid.Children.Add(cell);
             themeSwatches.Add((id, ring, label));
+        }
+    }
+
+    private readonly List<(SpeechModel model, TextBlock radio, TextBlock status)> modelRows = new();
+
+    /// <summary>
+    /// One row per speech model: name, what it is good at, and its size or
+    /// download progress. Picking one that is not on disk downloads it first;
+    /// the current model keeps working until it is ready.
+    /// </summary>
+    private void BuildModelRows()
+    {
+        foreach (var model in SpeechModel.All)
+        {
+            var radio = new TextBlock { FontSize = 15, Width = 24, VerticalAlignment = VerticalAlignment.Center };
+            var status = new TextBlock { FontSize = 13, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right, Width = 170 };
+            var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            text.Children.Add(new TextBlock { Text = model.Name, FontSize = 15, FontWeight = FontWeights.Medium, Foreground = (Brush)FindResource("Ink") });
+            text.Children.Add(new TextBlock { Text = model.Detail, FontSize = 13, Foreground = Muted, Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
+            var dock = new DockPanel { Background = Brushes.Transparent };
+            DockPanel.SetDock(radio, Dock.Left);
+            DockPanel.SetDock(status, Dock.Right);
+            dock.Children.Add(radio);
+            dock.Children.Add(status);
+            dock.Children.Add(text);
+            var row = new Border
+            {
+                Child = dock, Padding = new Thickness(0, 12, 0, 12), Cursor = Cursors.Hand,
+                BorderBrush = (Brush)FindResource("Hairline"), BorderThickness = new Thickness(0, 0, 0, 1),
+            };
+            string id = model.Id;
+            row.MouseLeftButtonUp += (_, _) =>
+            {
+                if (state.DownloadingModel == id && state.DownloadPhase == ModelDownloader.Phase.Downloading) state.CancelDownload();
+                else if (state.SpeechModel != id) state.ChooseModel(id);
+            };
+            ModelList.Children.Add(row);
+            modelRows.Add((model, radio, status));
+        }
+    }
+
+    private void BindModelRows()
+    {
+        foreach (var (model, radio, status) in modelRows)
+        {
+            bool selected = model.Id == state.SpeechModel;
+            bool mine = state.DownloadingModel == model.Id;
+            radio.Text = selected ? "◉" : "○";
+            radio.Foreground = selected ? (Brush)FindResource("Accent") : Muted;
+            (status.Text, status.Foreground) = (mine, state.DownloadPhase) switch
+            {
+                (true, ModelDownloader.Phase.Downloading) => ($"{(int)(state.DownloadProgress * 100)}% · Cancel", Muted),
+                (true, ModelDownloader.Phase.Verifying) => ("Verifying…", Muted),
+                (true, ModelDownloader.Phase.Failed) => ("Download failed · Try again", (Brush)FindResource("Accent")),
+                _ when model.IsDownloaded => (selected ? "In use" : "Downloaded", Muted),
+                _ => ($"Download · {model.SizeMB} MB", (Brush)FindResource("Accent")),
+            };
         }
     }
 

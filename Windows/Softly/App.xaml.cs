@@ -76,9 +76,12 @@ public partial class App : Application
             state.DownloadPhase = downloader.State;
             state.DownloadProgress = downloader.Progress;
             state.DownloadError = downloader.Error;
+            state.DownloadingModel = downloader.Model?.Id ?? "";
         };
-        downloader.OnComplete = () => engine.LoadModel();
-        state.DownloadModel = () => downloader.Start();
+        // A model picked in Preferences takes over once it is on disk.
+        downloader.OnComplete = model => UseModel(model.Id);
+        state.DownloadModel = () => downloader.Start(SpeechModel.Current);
+        state.ChooseModel = ChooseModel;
         state.CancelDownload = () => downloader.Cancel();
         state.PreviewPill = () => engine.Preview();
         updater = new Updater(Dispatcher);
@@ -101,7 +104,9 @@ public partial class App : Application
             "cancel" => Run(() => engine.CancelNow()),
             "toggle" => Run(() => engine.Toggle()),
             "check-update" => Run(() => updater.Check()),
-            "download-model" => Run(() => downloader.Start()),
+            "download-model" => Run(() => downloader.Start(SpeechModel.Current)),
+            "model-state" => Task.FromResult($"model={state.SpeechModel} status={engine.ModelStatus} downloading={state.DownloadingModel} {downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
+            var t when t.StartsWith("choose-model ") => Run(() => ChooseModel(t.Substring(13))),
             "download-state" => Task.FromResult($"{downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
             "install-update" => Run(() => updater.Install()),
             "update-state" => Task.FromResult($"{updater.State} {updater.LatestVersion} {updater.Error} current={Updater.CurrentVersion}"),
@@ -206,6 +211,27 @@ public partial class App : Application
         mainWindow.Show();
         if (mainWindow.WindowState == WindowState.Minimized) mainWindow.WindowState = WindowState.Normal;
         mainWindow.Activate();
+    }
+
+    /// <summary>
+    /// A downloaded model is switched to at once; otherwise it is fetched
+    /// first and the current one keeps working meanwhile.
+    /// </summary>
+    private void ChooseModel(string id)
+    {
+        var model = SpeechModel.With(id);
+        if (model.IsDownloaded)
+        {
+            if (downloader!.Model != null) downloader.Cancel();
+            UseModel(id);
+        }
+        else downloader!.Start(model);
+    }
+
+    private void UseModel(string id)
+    {
+        state.SpeechModel = id;
+        engine?.LoadModel();
     }
 
     private void ShowModelFolder()

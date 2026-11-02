@@ -1,10 +1,12 @@
 import Foundation
 
-/// Recognition settings mirror the Linux Voxtype config (small.en Q5_1,
-/// English, flash attention, four threads, custom vocabulary prompt).
+import DictationCore
+
+/// Recognition settings mirror the Linux Voxtype config (English, flash
+/// attention, four threads, custom vocabulary prompt). The model is picked
+/// in Preferences from SpeechModel.all.
 enum Settings {
     static let appName = "Softly"
-    static let modelFileName = "ggml-small.en-q5_1.bin"
     static let language = "en"
     /// Names the model otherwise misspells, edited in the window's Vocabulary
     /// view. Empty on first run; each person adds their own.
@@ -24,21 +26,13 @@ enum Settings {
 
     static var modelDirectory: URL { supportDirectory.appendingPathComponent("Models", isDirectory: true) }
 
-    /// Where the model lived before the app was renamed from Quiet Dictation.
-    private static var legacyModelURL: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("QuietDictation/Models/\(modelFileName)")
+    /// Id of the speech model in use, from SpeechModel.all.
+    static var speechModel: String {
+        get { UserDefaults.standard.string(forKey: "speechModel") ?? SpeechModel.balanced.id }
+        set { UserDefaults.standard.set(newValue, forKey: "speechModel") }
     }
 
-    /// A model bundled in the app's Resources wins; otherwise Application
-    /// Support, falling back to the pre-rename folder.
-    static var modelURL: URL {
-        if let bundled = Bundle.main.url(forResource: modelFileName, withExtension: nil) { return bundled }
-        let current = modelDirectory.appendingPathComponent(modelFileName)
-        if FileManager.default.fileExists(atPath: current.path) { return current }
-        if FileManager.default.fileExists(atPath: legacyModelURL.path) { return legacyModelURL }
-        return current
-    }
+    static var modelURL: URL { SpeechModel.current.fileURL }
 
     static var soundsEnabled: Bool {
         get { UserDefaults.standard.object(forKey: "soundsEnabled") as? Bool ?? true }
@@ -78,5 +72,15 @@ enum Settings {
     static var initialPrompt: String {
         let words = vocabulary
         return words.isEmpty ? "" : words.joined(separator: ", ") + "."
+    }
+
+    /// "Heard this, type that" fixes applied after transcription.
+    static var replacements: [Replacement] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: "replacements"),
+                  let rules = try? JSONDecoder().decode([Replacement].self, from: data) else { return [] }
+            return rules
+        }
+        set { UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: "replacements") }
     }
 }

@@ -141,9 +141,12 @@ final class DictationEngine {
         }
     }
 
-    private func finish(_ text: String?) {
+    private func finish(_ transcript: String?) {
         state = .idle
         _ = controller.send(.reset, now: PillModel.now, state: state)
+        // "Heard this, type that" fixes; a transcript that was all filler is dropped.
+        let text = transcript.map { Replacements.apply($0, Settings.replacements) }
+            .flatMap { $0.isEmpty ? nil : $0 }
         guard let text else {
             hidePill()
             return
