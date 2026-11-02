@@ -32,6 +32,10 @@ fi
 cp -R "$FRAMEWORK" "$APP/Contents/Frameworks/"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/Sounds/*.wav "$APP/Contents/Resources/"
+# SwiftPM resource bundles (FluidAudio's) are found through Bundle.main.resourceURL.
+for bundle in "$BIN"/*.bundle; do
+  [[ -d $bundle ]] && cp -R "$bundle" "$APP/Contents/Resources/"
+done
 
 codesign --force --sign "$IDENTITY" "$APP/Contents/Frameworks/whisper.framework"
 if [[ $IDENTITY == "-" ]]; then

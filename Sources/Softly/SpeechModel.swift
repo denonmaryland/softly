@@ -17,11 +17,14 @@ struct SpeechModel: Identifiable, Equatable, Sendable {
         }
     }
 
+    enum Engine: Sendable { case whisper, parakeet }
+
     let id: String
     let name: String
     let detail: String
     let english: File
     let multilingual: File
+    var engine: Engine = .whisper
 
     static let fast = SpeechModel(
         id: "fast", name: "Fast", detail: "Smallest and quickest. Fine for short, plain sentences.",
@@ -37,7 +40,16 @@ struct SpeechModel: Identifiable, Equatable, Sendable {
                            english: turbo, multilingual: turbo)
     }()
 
-    static let all = [fast, balanced, accurate]
+    /// NVIDIA Parakeet TDT v3 on the Neural Engine through FluidAudio, which
+    /// downloads and keeps its own files. It detects 25 European languages by
+    /// itself and takes no vocabulary hints; fixes still apply.
+    static let parakeet: SpeechModel = {
+        let files = File(name: "parakeet-tdt-0.6b-v3-coreml", sha256: "", sizeMB: 480)
+        return SpeechModel(id: "parakeet", name: "Parakeet", detail: "Very fast on the Neural Engine. 25 languages; no vocabulary hints.",
+                           english: files, multilingual: files, engine: .parakeet)
+    }()
+
+    static let all = [fast, balanced, accurate, parakeet]
 
     static func with(id: String) -> SpeechModel {
         all.first { $0.id == id } ?? balanced
@@ -47,7 +59,7 @@ struct SpeechModel: Identifiable, Equatable, Sendable {
 
     /// Any model file by name, for a download that finishes later.
     static func file(named name: String) -> File? {
-        all.flatMap { [$0.english, $0.multilingual] }.first { $0.name == name }
+        all.filter { $0.engine == .whisper }.flatMap { [$0.english, $0.multilingual] }.first { $0.name == name }
     }
 
     /// The file this model needs for the language setting.
@@ -69,5 +81,7 @@ struct SpeechModel: Identifiable, Equatable, Sendable {
 
     var fileURL: URL { Self.url(of: file) }
 
-    var isDownloaded: Bool { FileManager.default.fileExists(atPath: fileURL.path) }
+    var isDownloaded: Bool {
+        engine == .parakeet ? ParakeetTranscriber.modelsReady : FileManager.default.fileExists(atPath: fileURL.path)
+    }
 }

@@ -26,6 +26,11 @@ final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
         if self.model == model, state == .verifying { return }
         if self.model == model, case .downloading = state { return }
         task?.cancel()
+        parakeetTask?.cancel()
+        if model.engine == .parakeet {
+            startParakeet(model)
+            return
+        }
         self.model = model
         lastStep = -1
         state = .downloading(0)
@@ -38,7 +43,33 @@ final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
         task.resume()
     }
 
+    private var parakeetTask: Task<Void, Never>?
+
+    /// FluidAudio fetches and checks Parakeet's files into its own cache.
+    private func startParakeet(_ model: SpeechModel) {
+        self.model = model
+        state = .downloading(0)
+        parakeetTask = Task { [weak self] in
+            do {
+                try await ParakeetTranscriber.download { fraction in
+                    Task { @MainActor in
+                        guard let self, self.model == model, case .downloading = self.state else { return }
+                        self.state = .downloading(min(fraction, 1))
+                    }
+                }
+                guard let self, !Task.isCancelled, self.model == model else { return }
+                self.model = nil
+                self.state = .idle
+                self.onComplete(model)
+            } catch {
+                guard let self, !Task.isCancelled, self.model == model else { return }
+                self.state = .failed(error.localizedDescription)
+            }
+        }
+    }
+
     func cancel() {
+        parakeetTask?.cancel()
         task?.cancel()
         task = nil
         model = nil

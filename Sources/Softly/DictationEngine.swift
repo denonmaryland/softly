@@ -16,7 +16,10 @@ final class DictationEngine {
 
     private var controller = GestureController()
     private let recorder = AudioRecorder()
-    private let transcriber = Transcriber()
+    private let whisper = Transcriber()
+    private let parakeet = ParakeetTranscriber()
+    /// The engine the current speech model uses; set by loadModel.
+    private var transcriber: SpeechBackend
     private var capTimer: Timer?
     /// Transcribing while you talk: pieces of a long recording, in order,
     /// filled in as they finish; `committed` samples have been handed out.
@@ -30,6 +33,7 @@ final class DictationEngine {
 
     init(pill: PillModel) {
         self.pill = pill
+        transcriber = SpeechModel.current.engine == .parakeet ? parakeet : whisper
         pill.levelSource = { [recorder] in recorder.currentRMS }
         pill.onCancelClick = { [weak self] in self?.cancelNow() }
         // Input device changed mid-recording: keep what was captured and transcribe it.
@@ -39,6 +43,9 @@ final class DictationEngine {
     func loadModel() {
         modelStatus = .loading
         onStatusChange()
+        let next: SpeechBackend = SpeechModel.current.engine == .parakeet ? parakeet : whisper
+        if next !== transcriber { transcriber.unload() }
+        transcriber = next
         transcriber.load(from: Settings.modelURL) { status in
             Task { @MainActor [weak self] in
                 self?.modelStatus = status
@@ -185,7 +192,7 @@ final class DictationEngine {
         }
         let token = session
         guard committed > 0 else {
-            transcriber.transcribe(samples) { text in
+            transcriber.transcribe(samples, context: "") { text in
                 Task { @MainActor [weak self] in
                     guard let self, self.session == token, self.state == .transcribing else { return }
                     self.finish(text)

@@ -4,6 +4,11 @@ import PackageDescription
 let package = Package(
     name: "Softly",
     platforms: [.macOS(.v14)],
+    dependencies: [
+        // Parakeet TDT v3 on the Neural Engine (Core ML). Pinned to a release
+        // a few weeks old (v0.17.7, 2026-10-08).
+        .package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.17.7"),
+    ],
     targets: [
         // Platform-independent logic: gestures, motion, waveform, transcript cleanup.
         // Builds and tests on Linux too.
@@ -16,7 +21,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "Softly",
-            dependencies: ["DictationCore", "whisper"],
+            dependencies: ["DictationCore", "whisper", .product(name: "FluidAudio", package: "FluidAudio")],
             linkerSettings: [
                 // whisper.framework is embedded in Contents/Frameworks by scripts/build-app.sh.
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"]),

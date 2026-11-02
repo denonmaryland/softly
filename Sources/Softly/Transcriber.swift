@@ -16,6 +16,13 @@ final class Transcriber: @unchecked Sendable {
         if let context { whisper_free(context) }
     }
 
+    func unload() {
+        queue.async {
+            if let context = self.context { whisper_free(context) }
+            self.context = nil
+        }
+    }
+
     func load(from url: URL, completion: @escaping @Sendable (Status) -> Void) {
         queue.async {
             guard FileManager.default.fileExists(atPath: url.path) else {
