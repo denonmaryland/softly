@@ -56,9 +56,9 @@ public sealed class Transcriber : IDisposable
             var tail = earlier.Length > 200 ? earlier[^200..] : earlier;
             var prompt = string.Join(" ", new[] { Settings.InitialPrompt, tail }.Where(p => p.Length > 0));
             var builder = f.CreateBuilder()
-                .WithLanguage(Settings.Language)
                 .WithThreads(Settings.Threads)
                 .WithNoContext();
+            builder = Settings.Language == "auto" ? builder.WithLanguageDetection() : builder.WithLanguage(Settings.Language);
             if (prompt.Length > 0) builder = builder.WithPrompt(prompt);
             var segments = new List<string>();
             await Task.Run(async () =>

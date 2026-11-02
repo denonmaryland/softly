@@ -13,7 +13,6 @@ namespace Softly;
 public static class Settings
 {
     public const string AppName = "Softly";
-    public const string Language = "en";
     public const int Threads = 4;
     /// <summary>Recording cap, 15 minutes.</summary>
     public const double MaxDuration = 900;
@@ -41,6 +40,7 @@ public static class Settings
         public List<string> Vocabulary { get; set; } = new(DefaultVocabulary);
         public string SpeechModel { get; set; } = "balanced";
         public bool SubmitWord { get; set; }
+        public string Language { get; set; } = "en";
         public List<Replacement> Replacements { get; set; } = new();
     }
 
@@ -114,6 +114,13 @@ public static class Settings
     {
         get => new(Load().Vocabulary);
         set { Load().Vocabulary = new List<string>(value); Save(); }
+    }
+
+    /// <summary>Whisper language code from Languages.All; "auto" detects it.</summary>
+    public static string Language
+    {
+        get => Load().Language;
+        set { Load().Language = value; Save(); }
     }
 
     /// <summary>Ending a dictation with "submit" presses Enter after the paste.</summary>

@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         state.downloadModel = { [weak self] in self?.downloader.start(SpeechModel.current) }
         state.cancelDownload = { [weak self] in self?.downloader.cancel() }
         state.chooseModel = { [weak self] id in self?.chooseModel(id) }
+        state.chooseLanguage = { [weak self] code in self?.chooseLanguage(code) }
         downloader.onChange = { [weak self] in
             guard let self else { return }
             self.state.modelDownload = self.downloader.state
@@ -78,6 +79,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if model.isDownloaded {
             if downloader.model != nil { downloader.cancel() }
             useModel(id)
+        } else {
+            downloader.start(model)
+        }
+    }
+
+    /// English uses the smaller English-only files; other languages need the
+    /// multilingual one, fetched first if it is not on disk yet.
+    private func chooseLanguage(_ code: String) {
+        state.language = code
+        let model = SpeechModel.current
+        if model.isDownloaded {
+            engine.loadModel()
         } else {
             downloader.start(model)
         }

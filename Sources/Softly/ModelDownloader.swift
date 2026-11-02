@@ -31,8 +31,9 @@ final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
         state = .downloading(0)
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         self.session = session
-        let task = session.downloadTask(with: model.url)
-        task.taskDescription = model.id
+        // The file for the current language; both names travel with the task.
+        let task = session.downloadTask(with: model.file.url)
+        task.taskDescription = model.id + "|" + model.file.name
         self.task = task
         task.resume()
     }
@@ -59,8 +60,9 @@ final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
     nonisolated func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         // The temporary file is deleted when this returns, so move it first.
         let fm = FileManager.default
-        guard let id = downloadTask.taskDescription else { return }
-        let model = SpeechModel.with(id: id)
+        guard let parts = downloadTask.taskDescription?.split(separator: "|"), parts.count == 2,
+              let file = SpeechModel.file(named: String(parts[1])) else { return }
+        let model = SpeechModel.with(id: String(parts[0]))
         let staging = fm.temporaryDirectory.appendingPathComponent("softly-model-\(UUID().uuidString).bin")
         do {
             try fm.moveItem(at: location, to: staging)
@@ -69,14 +71,14 @@ final class ModelDownloader: NSObject, URLSessionDownloadDelegate {
             return
         }
         Task { @MainActor in self.state = .verifying }
-        guard Self.sha256Hex(of: staging) == model.sha256 else {
+        guard Self.sha256Hex(of: staging) == file.sha256 else {
             try? fm.removeItem(at: staging)
             Task { @MainActor in self.state = .failed("The download did not verify. Try again.") }
             return
         }
         do {
             try fm.createDirectory(at: Settings.modelDirectory, withIntermediateDirectories: true)
-            let destination = Settings.modelDirectory.appendingPathComponent(model.fileName)
+            let destination = Settings.modelDirectory.appendingPathComponent(file.name)
             try? fm.removeItem(at: destination)
             try fm.moveItem(at: staging, to: destination)
             Task { @MainActor in

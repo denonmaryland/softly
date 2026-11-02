@@ -82,6 +82,7 @@ public partial class App : Application
         downloader.OnComplete = model => UseModel(model.Id);
         state.DownloadModel = () => downloader.Start(SpeechModel.Current);
         state.ChooseModel = ChooseModel;
+        state.ChooseLanguage = ChooseLanguage;
         state.CancelDownload = () => downloader.Cancel();
         state.PreviewPill = () => engine.Preview();
         updater = new Updater(Dispatcher);
@@ -107,6 +108,7 @@ public partial class App : Application
             "download-model" => Run(() => downloader.Start(SpeechModel.Current)),
             "model-state" => Task.FromResult($"model={state.SpeechModel} status={engine.ModelStatus} downloading={state.DownloadingModel} {downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
             var t when t.StartsWith("transcribe-ahead ") => engine.TranscribeAheadFileAsync(t.Substring(17)),
+            var t when t.StartsWith("choose-language ") => Run(() => ChooseLanguage(t.Substring(16))),
             var t when t.StartsWith("choose-model ") => Run(() => ChooseModel(t.Substring(13))),
             "download-state" => Task.FromResult($"{downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
             "install-update" => Run(() => updater.Install()),
@@ -226,6 +228,18 @@ public partial class App : Application
             if (downloader!.Model != null) downloader.Cancel();
             UseModel(id);
         }
+        else downloader!.Start(model);
+    }
+
+    /// <summary>
+    /// English uses the smaller English-only files; other languages need the
+    /// multilingual one, fetched first if it is not on disk yet.
+    /// </summary>
+    private void ChooseLanguage(string code)
+    {
+        state.Language = code;
+        var model = SpeechModel.Current;
+        if (model.IsDownloaded) engine?.LoadModel();
         else downloader!.Start(model);
     }
 

@@ -45,11 +45,12 @@ public sealed class ModelDownloader
         int gen = ++generation;
         Model = model;
         Set(gen, Phase.Downloading, 0);
-        var part = model.FilePath + ".part";
+        var target = model.File; // the file for the current language
+        var part = target.FilePath + ".part";
         try
         {
             Directory.CreateDirectory(Settings.ModelDirectory);
-            using var response = await Http.GetAsync(model.Url, HttpCompletionOption.ResponseHeadersRead, token);
+            using var response = await Http.GetAsync(target.Url, HttpCompletionOption.ResponseHeadersRead, token);
             response.EnsureSuccessStatusCode();
             long total = response.Content.Headers.ContentLength ?? 0, done = 0;
             int lastStep = -1;
@@ -74,13 +75,13 @@ public sealed class ModelDownloader
                 using var stream = File.OpenRead(part);
                 return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
             }, token);
-            if (hash != model.Sha256)
+            if (hash != target.Sha256)
             {
                 TryDelete(part);
                 Set(gen, Phase.Failed, 0, "The download did not verify. Try again.");
                 return;
             }
-            File.Move(part, model.FilePath, overwrite: true);
+            File.Move(part, target.FilePath, overwrite: true);
             Set(gen, Phase.Idle, 0, done: model);
         }
         catch (OperationCanceledException)

@@ -1,3 +1,4 @@
+import DictationCore
 import SwiftUI
 
 /// The preference rows and a permissions summary. The shortcut row records
@@ -47,7 +48,17 @@ struct PreferencesView: View {
                     .pickerStyle(.menu)
                     .fixedSize()
                 }
-                PreferenceRow(title: "Speech model", subtitle: "\(SpeechModel.current.name) · English · runs on this Mac") {
+                PreferenceRow(title: "Language", subtitle: "What you speak. Other than English uses a multilingual model.") {
+                    Picker("Language", selection: Binding(get: { state.language }, set: { state.chooseLanguage($0) })) {
+                        ForEach(Languages.all, id: \.code) { language in
+                            Text(language.name).tag(language.code)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+                PreferenceRow(title: "Speech model", subtitle: "\(SpeechModel.current.name) · \(Languages.name(state.language)) · runs on this Mac") {
                     modelStatus
                 }
                 PreferenceRow(title: "Updates", subtitle: "Softly \(Updater.currentVersion) · checked quietly every few hours") {

@@ -27,6 +27,7 @@ public sealed class AppState : INotifyPropertyChanged
     private List<Replacement> replacements = Settings.Replacements;
     private string speechModel = Settings.SpeechModel;
     private string downloadingModel = "";
+    private string language = Settings.Language;
     private Updater.Phase updatePhase = Updater.Phase.Idle;
     private string updateVersion = "", updateError = "";
     private ModelDownloader.Phase downloadPhase = ModelDownloader.Phase.Idle;
@@ -99,10 +100,17 @@ public sealed class AppState : INotifyPropertyChanged
         set { if (Set(ref speechModel, value, nameof(ModelSubtitle), nameof(ModelActionText))) Settings.SpeechModel = value; }
     }
 
+    /// <summary>Whisper language code; pick with ChooseLanguage.</summary>
+    public string Language
+    {
+        get => language;
+        set { if (Set(ref language, value, nameof(ModelSubtitle), nameof(ModelActionText))) Settings.Language = value; }
+    }
+
     /// <summary>Id of the model being downloaded; empty when none is.</summary>
     public string DownloadingModel { get => downloadingModel; set => Set(ref downloadingModel, value); }
 
-    public string ModelSubtitle => Softly.SpeechModel.With(speechModel).Name + " · English · runs on this PC";
+    public string ModelSubtitle => Softly.SpeechModel.With(speechModel).Name + " · " + Languages.Name(language) + " · runs on this PC";
 
     public Updater.Phase UpdatePhase { get => updatePhase; set => Set(ref updatePhase, value, nameof(UpdateText)); }
     public string UpdateVersion { get => updateVersion; set => Set(ref updateVersion, value, nameof(UpdateText)); }
@@ -117,6 +125,7 @@ public sealed class AppState : INotifyPropertyChanged
     public Action DownloadModel = () => { };
     public Action CancelDownload = () => { };
     public Action<string> ChooseModel = _ => { };
+    public Action<string> ChooseLanguage = _ => { };
     public Action PreviewPill = () => { };
     public Action<Hotkey> ApplyHotkey = _ => { };
     public Action CaptureHotkey = () => { };

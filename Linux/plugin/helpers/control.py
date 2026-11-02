@@ -13,6 +13,8 @@
     control.py fix-remove <heard>    -> same
     control.py model <id>            -> speech model fast|balanced|accurate; downloads it first in the background
     control.py cancel-download       -> stop that download
+    control.py language <code>       -> Voxtype whisper.language (en, auto, es, ...); other than English
+                                        switches to the model's multilingual file, downloading it first
     control.py remember <file>       -> keep this transcript in the recent list
     control.py clear-recent          -> forget the recent list
     control.py check-update          -> compare the manifest version with the latest GitHub release
@@ -442,14 +444,35 @@ def remove_fix(heard):
 # Same files, ids and checksums as SpeechModel.swift and SpeechModel.cs. They
 # go in Voxtype's models folder and whisper.model points at the chosen one.
 
+# Fast and Balanced have an English-only file and a multilingual one.
+TURBO = {"file": "ggml-large-v3-turbo-q5_0.bin", "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2", "sizeMB": 574}
 MODELS = [
-    {"id": "fast", "name": "Fast", "detail": "Smallest and quickest", "file": "ggml-base.en-q5_1.bin",
-     "sha256": "4baf70dd0d7c4247ba2b81fafd9c01005ac77c2f9ef064e00dcf195d0e2fdd2f", "sizeMB": 60},
-    {"id": "balanced", "name": "Balanced", "detail": "The default", "file": "ggml-small.en-q5_1.bin",
-     "sha256": "bfdff4894dcb76bbf647d56263ea2a96645423f1669176f4844a1bf8e478ad30", "sizeMB": 190},
-    {"id": "accurate", "name": "Accurate", "detail": "Best with names and code", "file": "ggml-large-v3-turbo-q5_0.bin",
-     "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2", "sizeMB": 574},
+    {"id": "fast", "name": "Fast", "detail": "Smallest and quickest",
+     "en": {"file": "ggml-base.en-q5_1.bin", "sha256": "4baf70dd0d7c4247ba2b81fafd9c01005ac77c2f9ef064e00dcf195d0e2fdd2f", "sizeMB": 60},
+     "multi": {"file": "ggml-base-q5_1.bin", "sha256": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898", "sizeMB": 60}},
+    {"id": "balanced", "name": "Balanced", "detail": "The default",
+     "en": {"file": "ggml-small.en-q5_1.bin", "sha256": "bfdff4894dcb76bbf647d56263ea2a96645423f1669176f4844a1bf8e478ad30", "sizeMB": 190},
+     "multi": {"file": "ggml-small-q5_1.bin", "sha256": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb", "sizeMB": 190}},
+    {"id": "accurate", "name": "Accurate", "detail": "Best with names and code", "en": TURBO, "multi": TURBO},
 ]
+# Same list as Languages.swift and Languages.cs.
+LANGUAGES = [
+    ("en", "English"), ("auto", "Detect automatically"),
+    ("es", "Spanish"), ("fr", "French"), ("de", "German"), ("it", "Italian"),
+    ("pt", "Portuguese"), ("nl", "Dutch"), ("pl", "Polish"), ("ru", "Russian"),
+    ("uk", "Ukrainian"), ("tr", "Turkish"), ("ar", "Arabic"), ("hi", "Hindi"),
+    ("ja", "Japanese"), ("ko", "Korean"), ("zh", "Chinese"),
+]
+
+
+def current_language():
+    return voxtype_get("whisper.language") or "en"
+
+
+def model_file(model, language=None):
+    """The file a model needs for the language: English-only, or multilingual."""
+    language = current_language() if language is None else language
+    return model["en"] if language == "en" else model["multi"]
 MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/"
 DOWNLOAD = os.path.join(os.path.dirname(RECENT), "download.json")
 
@@ -466,7 +489,7 @@ def model_by_id(model_id):
 
 def current_model_id(model_setting):
     name = os.path.basename(model_setting or "")
-    return next((m["id"] for m in MODELS if m["file"] == name), "")
+    return next((m["id"] for m in MODELS if name in (m["en"]["file"], m["multi"]["file"])), "")
 
 
 def read_download():
@@ -495,7 +518,7 @@ def write_download(data):
 
 
 def use_model(model):
-    path = os.path.join(models_dir(), model["file"])
+    path = os.path.join(models_dir(), model_file(model)["file"])
     code, out, err = run(["voxtype", "config", "set", "whisper.model", path])
     if code != 0:
         return [err or out or "Could not write the Voxtype config."]
@@ -506,7 +529,7 @@ def choose_model(model_id):
     model = model_by_id(model_id)
     if not model:
         return ["Unknown speech model: " + model_id]
-    if os.path.exists(os.path.join(models_dir(), model["file"])):
+    if os.path.exists(os.path.join(models_dir(), model_file(model)["file"])):
         cancel_download()
         return use_model(model)
     current = read_download()
@@ -541,7 +564,8 @@ def download_model(model_id):
     if not model:
         return
     pid = os.getpid()
-    dest = os.path.join(models_dir(), model["file"])
+    target = model_file(model)
+    dest = os.path.join(models_dir(), target["file"])
     part = dest + ".part"
 
     def report(phase, progress=0.0, error=""):
@@ -558,7 +582,7 @@ def download_model(model_id):
     report("downloading")
     try:
         os.makedirs(models_dir(), exist_ok=True)
-        req = urllib.request.Request(MODEL_URL + model["file"], headers={"User-Agent": "Softly/" + plugin_version() + " (Omarchy)"})
+        req = urllib.request.Request(MODEL_URL + target["file"], headers={"User-Agent": "Softly/" + plugin_version() + " (Omarchy)"})
         digest = hashlib.sha256()
         with urllib.request.urlopen(req, timeout=30) as r, open(part, "wb") as f:
             total = int(r.headers.get("Content-Length") or 0)
@@ -575,7 +599,7 @@ def download_model(model_id):
                     last = step
                     report("downloading", done / total if total else 0)
         report("verifying", 1)
-        if digest.hexdigest() != model["sha256"]:
+        if digest.hexdigest() != target["sha256"]:
             os.remove(part)
             report("failed", 0, "The download did not verify. Try again.")
             return
@@ -597,6 +621,17 @@ def download_model(model_id):
             pass
 
 
+def set_language(code):
+    if code not in [c for c, _ in LANGUAGES]:
+        return ["Unknown language: " + code]
+    code_, out, err = run(["voxtype", "config", "set", "whisper.language", code])
+    if code_ != 0:
+        return [err or out or "Could not write the Voxtype config."]
+    # Re-pick the current model: English and other languages use different
+    # files. One on disk is switched to (and Voxtype restarted) straight away.
+    return choose_model(current_model_id(voxtype_get("whisper.model")) or "balanced")
+
+
 def restart():
     code, _, err = run(["systemctl", "--user", "restart", "voxtype"], timeout=30)
     return [] if code == 0 else [err or "Could not restart Voxtype."]
@@ -609,6 +644,7 @@ def state(errors=None):
     _, model, _ = run(["voxtype", "config", "get", "whisper.model"])
     errors = errors or []
     folder = models_dir()
+    language = current_language()
     return {
         "ok": not errors,
         "errors": errors,
@@ -621,8 +657,10 @@ def state(errors=None):
         "daemon": daemon if code == 0 and daemon else "unknown",
         "model": os.path.basename(model) if model else "",
         "speechModel": current_model_id(model),
-        "models": [{"id": m["id"], "name": m["name"], "detail": m["detail"], "sizeMB": m["sizeMB"],
-                    "downloaded": os.path.exists(os.path.join(folder, m["file"]))} for m in MODELS],
+        "models": [{"id": m["id"], "name": m["name"], "detail": m["detail"], "sizeMB": model_file(m, language)["sizeMB"],
+                    "downloaded": os.path.exists(os.path.join(folder, model_file(m, language)["file"]))} for m in MODELS],
+        "language": language,
+        "languages": [{"code": c, "name": n} for c, n in LANGUAGES],
         "download": read_download(),
         "replacements": current_fixes(),
         "recent": read_recent(),
@@ -669,6 +707,8 @@ def main(argv):
         errors = remove_fix(argv[2])
     elif cmd == "model" and len(argv) == 3:
         errors = choose_model(argv[2])
+    elif cmd == "language" and len(argv) == 3:
+        errors = set_language(argv[2])
     elif cmd == "cancel-download":
         errors = cancel_download()
     elif cmd == "download-model" and len(argv) == 3:

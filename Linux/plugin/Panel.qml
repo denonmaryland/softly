@@ -42,6 +42,10 @@ Panel {
   property var models: []          // [{id, name, detail, sizeMB, downloaded}]
   property var download: null      // {id, phase, progress, error} while a model downloads
   property var fixes: []           // [{from, to}]
+  property string language: "en"
+  property var languages: []       // [{code, name}]
+  property bool langsOpen: false
+  readonly property string languageName: (languages.find(l => l.code === language) || { name: language }).name
   property string heardDraft: ""
   property string typedDraft: ""
   property var recent: []       // [{text, at}], newest first
@@ -93,6 +97,8 @@ Panel {
       models = s.models || []
       download = s.download || null
       fixes = s.replacements || []
+      language = s.language || "en"
+      languages = s.languages || []
       recent = s.recent || []
       version = s.version || ""
       setup = s.setup || null
@@ -101,7 +107,7 @@ Panel {
       else if (message.indexOf("Saving") === 0) message = "Saved · Voxtype restarted"
       else if (message.indexOf("Setting up") === 0) message = setup && setup.complete ? "Set up · hold " + hotkey + " to dictate" : "Setup did not finish"
       else if (message.indexOf("Removing") === 0) message = "Softly's setup was removed"
-      else if (message.indexOf("Switching model") === 0) message = "Saved · Voxtype restarted"
+      else if (message.indexOf("Switching model") === 0 || message.indexOf("Switching language") === 0) message = download ? "" : "Saved · Voxtype restarted"
       else if (message.indexOf("Switching") === 0) message = ""
     } catch (e) { message = "Could not read dictation settings." }
   }
@@ -170,6 +176,12 @@ Panel {
     message = m && m.downloaded ? "Switching model and restarting Voxtype…" : ""
     send(["model", id])
   }
+  function chooseLanguage(code) {
+    if (code === language) return
+    language = code
+    message = "Switching language and restarting Voxtype…"
+    send(["language", code])
+  }
   function cancelDownload() { download = null; send(["cancel-download"]) }
   function addFix() {
     const heard = heardDraft.trim()
@@ -210,7 +222,7 @@ Panel {
   Component.onCompleted: refresh()
   onOpenedChanged: {
     if (opened) { message = ""; refresh(); poll.restart() }
-    else { poll.stop(); stylesOpen = false; keysOpen = false; keyboard.forceActiveFocus() }
+    else { poll.stop(); stylesOpen = false; keysOpen = false; langsOpen = false; keyboard.forceActiveFocus() }
   }
 
   // Daemon state changes outside this panel; keep the status line honest while it is open.
@@ -604,6 +616,77 @@ Panel {
                   enabled: root.loaded
                   onEntered: root.cursor = 3
                   onClicked: root.setTheme(swatch.modelData.id)
+                }
+              }
+            }
+          }
+        }
+
+        // ---------- Language: English, detect, or one of the common ones ----------
+        Column {
+          width: parent.width
+          spacing: Style.space(8)
+          Item {
+            width: parent.width
+            height: langText.implicitHeight
+            Column {
+              id: langText
+              width: parent.width - langLink.implicitWidth - Style.space(12)
+              spacing: Style.space(2)
+              Text { text: "Language"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body }
+              Text {
+                width: parent.width; wrapMode: Text.WordWrap
+                text: root.languageName + (root.language === "en" ? "" : " · uses the multilingual model")
+                color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
+              }
+            }
+            Text {
+              id: langLink
+              anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+              text: root.langsOpen ? "Done" : "Change"
+              color: root.fg
+              opacity: langMouse.containsMouse ? 0.9 : 0.5
+              font.family: root.family; font.pixelSize: Style.font.caption
+              MouseArea {
+                id: langMouse
+                anchors.fill: parent; anchors.margins: -Style.space(4)
+                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                enabled: root.loaded
+                onClicked: root.langsOpen = !root.langsOpen
+              }
+            }
+          }
+          Flow {
+            id: langChips
+            visible: root.langsOpen
+            width: parent.width
+            spacing: Style.space(6)
+            readonly property real cell: Math.floor((width - 2 * spacing) / 3)
+            Repeater {
+              model: root.languages
+              delegate: Rectangle {
+                id: lchip
+                required property var modelData
+                readonly property bool selected: modelData.code === root.language
+                width: modelData.code === "auto" ? langChips.cell * 2 + langChips.spacing : langChips.cell
+                height: Style.space(28); radius: Style.space(8)
+                color: root.alphaOf(root.fg, lchipMouse.containsMouse ? 0.1 : 0.05)
+                border.width: selected ? 2 : 1
+                border.color: selected ? root.accent : root.alphaOf(root.fg, 0.14)
+                Text {
+                  anchors.centerIn: parent
+                  text: lchip.modelData.name
+                  color: root.fg
+                  opacity: lchip.selected ? 1 : 0.75
+                  font.family: root.family; font.pixelSize: Style.font.caption
+                  font.weight: lchip.selected ? Font.DemiBold : Font.Normal
+                }
+                MouseArea {
+                  id: lchipMouse
+                  anchors.fill: parent
+                  hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                  enabled: !root.busy
+                  onClicked: root.chooseLanguage(lchip.modelData.code)
                 }
               }
             }

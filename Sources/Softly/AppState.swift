@@ -46,6 +46,10 @@ final class AppState: ObservableObject {
     @Published var speechModel = Settings.speechModel {
         didSet { Settings.speechModel = speechModel }
     }
+    /// Whisper language code; pick with chooseLanguage.
+    @Published var language = Settings.language {
+        didSet { Settings.language = language }
+    }
     /// Id of the model being downloaded, if any.
     @Published var downloadingModel: String?
     @Published var update: Updater.State = .idle
@@ -57,6 +61,7 @@ final class AppState: ObservableObject {
     var downloadModel: () -> Void = {}
     var cancelDownload: () -> Void = {}
     var chooseModel: (String) -> Void = { _ in }
+    var chooseLanguage: (String) -> Void = { _ in }
     var previewPill: () -> Void = {}
     var applyHotkey: (Hotkey) -> Void = { _ in }
     var captureHotkey: () -> Void = {}

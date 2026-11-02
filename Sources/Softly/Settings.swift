@@ -2,12 +2,16 @@ import Foundation
 
 import DictationCore
 
-/// Recognition settings mirror the Linux Voxtype config (English, flash
-/// attention, four threads, custom vocabulary prompt). The model is picked
-/// in Preferences from SpeechModel.all.
+/// Recognition settings mirror the Linux Voxtype config (flash attention,
+/// four threads, custom vocabulary prompt). The model and language are
+/// picked in Preferences.
 enum Settings {
     static let appName = "Softly"
-    static let language = "en"
+    /// Whisper language code from Languages.all; "auto" detects it.
+    static var language: String {
+        get { UserDefaults.standard.string(forKey: "language") ?? "en" }
+        set { UserDefaults.standard.set(newValue, forKey: "language") }
+    }
     /// Names the model otherwise misspells, edited in the window's Vocabulary
     /// view. Empty on first run; each person adds their own.
     static let defaultVocabulary: [String] = []

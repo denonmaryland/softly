@@ -328,6 +328,12 @@
               </Border>
               <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
                 <DockPanel>
+                  <ComboBox x:Name="LanguageBox" DockPanel.Dock="Right" Width="180" FontSize="14" VerticalAlignment="Center" SelectionChanged="LanguageChanged"/>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Language" Style="{StaticResource RowTitle}"/><TextBlock Text="What you speak. Other than English uses a multilingual model." Style="{StaticResource RowSub}"/></StackPanel>
+                </DockPanel>
+              </Border>
+              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
+                <DockPanel>
                   <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
                     <TextBlock x:Name="ModelText" FontSize="14" FontWeight="Medium" Foreground="{StaticResource Green}"/>
                     <Button x:Name="ModelAction" Style="{StaticResource LinkButton}" Content="" Click="ModelActionClick" Visibility="Collapsed" HorizontalAlignment="Right"/>

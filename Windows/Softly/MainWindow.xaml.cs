@@ -32,6 +32,7 @@ public partial class MainWindow : Window
         };
         BuildThemeSwatches();
         BuildModelRows();
+        foreach (var (code, name) in Languages.All) LanguageBox.Items.Add(new ComboBoxItem { Content = name, Tag = code });
         Bind();
     }
 
@@ -78,6 +79,9 @@ public partial class MainWindow : Window
         RuleList.ItemsSource = state.Replacements.Select(r => new RuleRow(r)).ToList();
         RulesEmpty.Visibility = state.Replacements.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         ModelSub.Text = state.ModelSubtitle;
+        binding = true;
+        LanguageBox.SelectedItem = LanguageBox.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == state.Language);
+        binding = false;
         BindModelRows();
         PromptText.Text = state.PromptText;
         VersionText.Text = "Softly " + Updater.CurrentVersion + " · checked quietly every few hours";
@@ -253,6 +257,15 @@ public partial class MainWindow : Window
             ThemeGrid.Children.Add(cell);
             themeSwatches.Add((id, ring, label));
         }
+    }
+
+    /// <summary>Set while Bind updates controls, so their change events don't write back.</summary>
+    private bool binding;
+
+    private void LanguageChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (binding || LanguageBox.SelectedItem is not ComboBoxItem item) return;
+        if ((string)item.Tag != state.Language) state.ChooseLanguage((string)item.Tag);
     }
 
     private readonly List<(SpeechModel model, TextBlock radio, TextBlock status)> modelRows = new();
