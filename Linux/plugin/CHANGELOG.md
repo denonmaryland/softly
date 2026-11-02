@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- No plugin changes; the version follows the Windows app, which now
+  responds to the key immediately on a busy PC.
+
 ## 0.2.2
 
 - No plugin changes; the version follows the Windows app, which now adds
