@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.5
+
+- The pill still follows your Omarchy theme. For anyone who wants a fixed
+  look, "Pill style" in the popover has a Change link with eleven styles
+  (seven dark, three light, and Midnight); pick Omarchy to follow the
+  theme again. The Mac and Windows apps get the same styles in Preferences.
+
 ## 0.2.4
 
 - One tap starts hands-free dictation and the next tap finishes it; no

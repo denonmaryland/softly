@@ -291,6 +291,11 @@
                 </DockPanel>
               </Border>
             </StackPanel>
+            <DockPanel Margin="0,29,0,0">
+              <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" FontSize="13" Content="Preview" Click="PreviewClick"/>
+              <TextBlock Text="PILL STYLE" Style="{StaticResource Caption}" VerticalAlignment="Center"/>
+            </DockPanel>
+            <WrapPanel x:Name="ThemeGrid" Margin="-5,10,0,0"/>
             <TextBlock Text="SHORTCUT" Style="{StaticResource Caption}" Margin="0,29,0,0"/>
             <TextBlock x:Name="HookText" FontSize="13" Foreground="{StaticResource Green}" Margin="0,12,0,0" Text="✓ Right Alt is reserved for Softly while it runs"/>
           </StackPanel>

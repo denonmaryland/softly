@@ -38,7 +38,7 @@ Local Whisper dictation with the same quiet backlit pill on macOS, Windows and O
 <th width="33%">Omarchy Linux</th>
 </tr>
 <tr>
-<td valign="top">Menu-bar app in Swift. whisper.cpp with Metal, a SwiftUI pill in a non-activating panel, paste through ⌘V, Music and Spotify pause while you talk. Settings window with Home, Vocabulary and Preferences. <a href="#the-mac-app">Below.</a></td>
+<td valign="top">Menu-bar app in Swift. whisper.cpp with Metal, a SwiftUI pill in a non-activating panel, paste through ⌘V, Music and Spotify pause while you talk. Settings window with Home, Vocabulary and Preferences, including eleven pill styles. <a href="#the-mac-app">Below.</a></td>
 <td valign="top">Tray app in .NET 8 and WPF. Whisper.net on Vulkan when the GPU allows it, a low-level hook on Right Alt, WASAPI capture, system media sessions pause, the same settings window. <a href="Windows/README.md">Windows/README.md</a></td>
 <td valign="top">An Omarchy plugin on Voxtype: the pill follows your theme, and a bar popover holds sounds, recent transcripts, vocabulary, status and updates. <a href="https://github.com/denonmaryland/omarchy-softly">omarchy-softly</a></td>
 </tr>
@@ -102,7 +102,7 @@ A menu-bar dictation app for the Mac, ported from the Omarchy plugin. It uses th
 | Gestures | `Controller.js` | `GestureController.swift` (same rules, same tests) |
 | Pill | Quickshell QML | SwiftUI Canvas in a non-activating `NSPanel` |
 | Paste | `voxtype-app-paste` + Hyprland | `NSPasteboard` + synthetic ⌘V |
-| Accent colour | Omarchy theme | macOS accent colour (System Settings → Appearance) |
+| Pill style | Follows the Omarchy theme (a fixed style can be picked in the popover) | 11 styles in Preferences; Midnight, the default, uses the macOS accent colour |
 | Settings | Bar popover (sounds, vocabulary, status) | Window (Home, Vocabulary, Preferences) |
 | Media pausing | Voxtype `pause_media` (MPRIS) | `MediaPauser.swift` (Music, Spotify via AppleScript) |
 

@@ -76,22 +76,23 @@ struct PillRenderer {
 
         // Lifted: a soft ambient shadow (spread −5) and a tight contact shadow.
         // The casters sit inside the opaque capsule drawn over them.
+        let light = palette.isLight
         var ambient = ctx
-        ambient.addFilter(.shadow(color: .black.opacity(0.6), radius: 7.5, x: 0, y: 7))
+        ambient.addFilter(.shadow(color: .black.opacity(light ? 0.18 : 0.6), radius: 7.5, x: 0, y: 7))
         ambient.fill(capsule(full.insetBy(dx: 5, dy: 5)), with: .color(.black))
         var contact = ctx
-        contact.addFilter(.shadow(color: .black.opacity(0.4), radius: 0.75, x: 0, y: 1))
+        contact.addFilter(.shadow(color: .black.opacity(light ? 0.14 : 0.4), radius: 0.75, x: 0, y: 1))
         contact.fill(capsule(full.insetBy(dx: 1, dy: 1)), with: .color(.black))
 
-        ctx.fill(capsule(full.insetBy(dx: -1, dy: -1)), with: .color(RGBA(0, 0, 0, 0.55).color))
+        ctx.fill(capsule(full.insetBy(dx: -1, dy: -1)), with: .color(RGBA(0, 0, 0, light ? 0.14 : 0.55).color))
         // Lit chamfer: dark lower lip and lit upper lip peek out around the face.
-        ctx.fill(capsule(full), with: .color(bg.darker(1.1).tint(RGBA(0, 0, 0, 0.45)).color))
+        ctx.fill(capsule(full), with: .color(bg.darker(1.1).tint(RGBA(0, 0, 0, light ? 0.12 : 0.45)).color))
         ctx.fill(capsule(CGRect(x: 0, y: 0, width: w, height: h - 1)),
-                 with: .color(bg.lighter(1.13).tint(RGBA(1, 0.98, 0.92, 0.18)).color))
+                 with: .color(bg.lighter(1.13).tint(RGBA(1, 0.98, 0.92, light ? 0.6 : 0.18)).color))
         let face = CGRect(x: 0, y: 1, width: w, height: h - 2)
         ctx.fill(capsule(face), with: .linearGradient(
             Gradient(stops: [
-                .init(color: bg.lighter(1.13).color, location: 0),
+                .init(color: bg.lighter(light ? 1.03 : 1.13).color, location: 0),
                 .init(color: bg.color, location: 0.5),
                 .init(color: bg.darker(1.1).color, location: 1),
             ]),
@@ -114,7 +115,7 @@ struct PillRenderer {
             // Lower lip catches the backlight; the upper edge falls into shadow.
             layer.fill(capsule(full), with: .color(floor.tint(accent.alpha(0.12 + 0.1 * glow)).color))
             layer.fill(capsule(CGRect(x: 0, y: 0, width: g.width, height: g.height - 1)),
-                       with: .color(floor.darker(1.6).color))
+                       with: .color(floor.darker(palette.isLight ? 1.15 : 1.6).color))
             let floorRect = CGRect(x: 0, y: 1.25, width: g.width, height: g.height - 2.25)
             layer.fill(capsule(floorRect), with: .color(floor.color))
 

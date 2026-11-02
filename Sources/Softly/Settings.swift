@@ -51,6 +51,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "pauseMedia") }
     }
 
+    /// The pill's style, an id from PillTheme.all.
+    static var pillTheme: String {
+        get { UserDefaults.standard.string(forKey: "pillTheme") ?? "system" }
+        set { UserDefaults.standard.set(newValue, forKey: "pillTheme") }
+    }
+
     static var vocabulary: [String] {
         get { UserDefaults.standard.stringArray(forKey: "vocabulary") ?? defaultVocabulary }
         set { UserDefaults.standard.set(newValue, forKey: "vocabulary") }

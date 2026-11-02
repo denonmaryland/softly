@@ -34,6 +34,7 @@ public static class Settings
     {
         public bool SoundsEnabled { get; set; } = true;
         public bool PauseMedia { get; set; } = true;
+        public string PillTheme { get; set; } = "system";
         public List<string> Vocabulary { get; set; } = new(DefaultVocabulary);
     }
 
@@ -80,6 +81,13 @@ public static class Settings
     {
         get => Load().PauseMedia;
         set { Load().PauseMedia = value; Save(); }
+    }
+
+    /// <summary>The pill's style, an id from PillTheme.All.</summary>
+    public static string PillTheme
+    {
+        get => Load().PillTheme;
+        set { Load().PillTheme = value; Save(); }
     }
 
     public static List<string> Vocabulary

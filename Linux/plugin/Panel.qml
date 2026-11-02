@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Ui
 import qs.Commons
+import "Themes.js" as Themes
 
 // Softly settings: the Linux counterpart of the Mac app's window,
 // in Omarchy's own idiom (a bar icon and a popover). Sounds live in
@@ -25,6 +26,11 @@ Panel {
 
   property bool loaded: false
   property bool sounds: true
+  property string pillTheme: "omarchy"
+  // The pill follows Omarchy by default; the fixed styles are for the Mac and
+  // Windows apps mostly, so the grid stays folded away until asked for.
+  property bool stylesOpen: false
+  readonly property string pillThemeName: Themes.named(pillTheme).name
   property var vocabulary: []
   property string service: "unknown"
   property string daemon: "unknown"
@@ -39,9 +45,9 @@ Panel {
   property string message: ""
   property var pending: []     // helper commands waiting their turn
   property string draft: ""
-  // Keyboard rows: 0 sounds · 1 add field · 2 preview · 3+ words.
+  // Keyboard rows: 0 sounds · 1 pill style (Enter opens, left/right picks) · 2 add field · 3 preview · 4+ words.
   property int cursor: 0
-  readonly property int wordRow0: 3
+  readonly property int wordRow0: 4
   readonly property int rowCount: wordRow0 + vocabulary.length
 
   readonly property bool busy: readProc.running || writeProc.running || pending.length > 0
@@ -58,6 +64,7 @@ Panel {
       const s = JSON.parse(text)
       loaded = true
       sounds = s.sounds !== false
+      pillTheme = s.pillTheme || "omarchy"
       vocabulary = s.vocabulary || []
       service = s.service || "unknown"
       daemon = s.daemon || "unknown"
@@ -85,6 +92,20 @@ Panel {
     message = ""
     send(["set", "sounds", on ? "true" : "false"])
   }
+  function setTheme(id) {
+    if (id === pillTheme) return
+    pillTheme = id
+    message = ""
+    send(["set", "theme", id])
+    // Service.qml picks the file up live; show it on screen straight away.
+    previewDelay.restart()
+  }
+  function stepTheme(dx) {
+    let i = 0
+    for (let k = 0; k < Themes.list.length; k++) if (Themes.list[k].id === pillTheme) i = k
+    setTheme(Themes.list[(i + dx + Themes.list.length) % Themes.list.length].id)
+  }
+  Timer { id: previewDelay; interval: 250; onTriggered: root.preview() }
   function addWord() {
     const w = draft.trim()
     if (!w) return
@@ -115,15 +136,16 @@ Panel {
   }
   function activate() {
     if (cursor === 0) setSounds(!sounds)
-    else if (cursor === 1) wordField.forceActiveFocus()
-    else if (cursor === 2) preview()
+    else if (cursor === 1) stylesOpen = !stylesOpen
+    else if (cursor === 2) wordField.forceActiveFocus()
+    else if (cursor === 3) preview()
     else if (cursor - wordRow0 < vocabulary.length) removeWord(vocabulary[cursor - wordRow0])
   }
   onRowCountChanged: if (cursor >= rowCount) cursor = Math.max(0, rowCount - 1)
   Component.onCompleted: refresh()
   onOpenedChanged: {
     if (opened) { message = ""; refresh(); poll.restart() }
-    else { poll.stop(); keyboard.forceActiveFocus() }
+    else { poll.stop(); stylesOpen = false; keyboard.forceActiveFocus() }
   }
 
   // Daemon state changes outside this panel; keep the status line honest while it is open.
@@ -135,7 +157,7 @@ Panel {
     function close(): void { root.close() }
     function toggle(): void { root.toggle() }
     function state(): string {
-      return JSON.stringify({loaded: root.loaded, sounds: root.sounds, vocabulary: root.vocabulary,
+      return JSON.stringify({loaded: root.loaded, sounds: root.sounds, pillTheme: root.pillTheme, vocabulary: root.vocabulary,
                              service: root.service, daemon: root.daemon, model: root.model, message: root.message})
     }
   }
@@ -189,7 +211,10 @@ Panel {
       blocked: wordField.activeFocus
       onCloseRequested: root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
-      onMoveRequested: function(dx, dy) { if (dy) root.cursor = Math.max(0, Math.min(root.rowCount - 1, root.cursor + dy)) }
+      onMoveRequested: function(dx, dy) {
+        if (dy) root.cursor = Math.max(0, Math.min(root.rowCount - 1, root.cursor + dy))
+        else if (dx && root.cursor === 1 && root.stylesOpen) root.stepTheme(dx)
+      }
       onActivateRequested: root.activate()
 
       Column {
@@ -286,6 +311,136 @@ Panel {
           focusRing: root.cursor === 0
           onToggled: root.setSounds(!root.sounds)
           onHoveredIn: root.cursor = 0
+        }
+
+        // ---------- Pill style: Omarchy's theme or a fixed look ----------
+        Column {
+          width: parent.width
+          spacing: Style.space(8)
+          Item {
+            width: parent.width
+            height: styleText.implicitHeight
+            Column {
+              id: styleText
+              width: parent.width - styleLink.implicitWidth - Style.space(12)
+              spacing: Style.space(2)
+              Text { text: "Pill style"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body; font.weight: root.cursor === 1 ? Font.DemiBold : Font.Normal }
+              Text {
+                width: parent.width; wrapMode: Text.WordWrap
+                text: root.pillTheme === "omarchy" ? "Follows your Omarchy theme" : root.pillThemeName + " · a fixed look, whatever the theme"
+                color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
+              }
+            }
+            Text {
+              id: styleLink
+              anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+              text: root.stylesOpen ? "Done" : "Change"
+              color: root.fg
+              opacity: styleMouse.containsMouse || root.cursor === 1 ? 0.9 : 0.5
+              font.family: root.family; font.pixelSize: Style.font.caption
+              MouseArea {
+                id: styleMouse
+                anchors.fill: parent; anchors.margins: -Style.space(4)
+                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                enabled: root.loaded
+                onEntered: root.cursor = 1
+                onClicked: root.stylesOpen = !root.stylesOpen
+              }
+            }
+          }
+          Flow {
+            id: swatches
+            visible: root.stylesOpen
+            width: parent.width
+            spacing: Style.space(6)
+            readonly property real cell: Math.floor((width - 3 * spacing) / 4)
+            Repeater {
+              model: Themes.list
+              delegate: Item {
+                id: swatch
+                required property var modelData
+                readonly property bool selected: modelData.id === root.pillTheme
+                readonly property color bg: modelData.background || Color.background
+                readonly property color ink: modelData.foreground || Color.foreground
+                readonly property color glow: modelData.accent || Color.accent
+                readonly property bool light: bg.hslLightness > 0.5
+                width: swatches.cell
+                height: swatchColumn.implicitHeight
+                Column {
+                  id: swatchColumn
+                  width: parent.width
+                  spacing: Style.space(4)
+                  Rectangle {
+                    width: parent.width; height: Style.space(26); radius: Style.space(8)
+                    color: "transparent"
+                    border.width: swatch.selected || (root.cursor === 1 && swatchMouse.containsMouse) ? 2 : 0
+                    border.color: swatch.selected ? root.accent : root.alphaOf(root.fg, 0.4)
+                    Rectangle {
+                      id: cap
+                      anchors.centerIn: parent
+                      width: parent.width - Style.space(8); height: Style.space(18); radius: height / 2
+                      border.width: 1
+                      border.color: Qt.rgba(0, 0, 0, swatch.light ? 0.12 : 0.4)
+                      gradient: Gradient {
+                        GradientStop { position: 0; color: Qt.lighter(swatch.bg, swatch.light ? 1.03 : 1.13) }
+                        GradientStop { position: 1; color: Qt.darker(swatch.bg, 1.1) }
+                      }
+                      Rectangle {
+                        x: 3; y: 3; width: parent.width - 16; height: parent.height - 6; radius: height / 2
+                        color: swatch.light ? Qt.darker(swatch.bg, 1.12) : Qt.darker(swatch.bg, 1.5)
+                        Rectangle {
+                          anchors.fill: parent; radius: height / 2
+                          gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0; color: Qt.alpha(swatch.glow, 0) }
+                            GradientStop { position: 0.5; color: Qt.alpha(swatch.glow, 0.55) }
+                            GradientStop { position: 1; color: Qt.alpha(swatch.glow, 0) }
+                          }
+                        }
+                        Row {
+                          anchors.centerIn: parent
+                          spacing: 2
+                          Repeater {
+                            model: [3, 6, 9, 5, 7, 4]
+                            delegate: Rectangle {
+                              required property var modelData
+                              anchors.verticalCenter: parent.verticalCenter
+                              width: 1.5; height: modelData; radius: 0.75
+                              color: swatch.ink
+                            }
+                          }
+                        }
+                      }
+                      Rectangle {
+                        anchors.right: parent.right; anchors.rightMargin: 5
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 3; height: 3; radius: 1.5
+                        color: Qt.alpha(swatch.ink, 0.76)
+                      }
+                    }
+                  }
+                  Text {
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
+                    text: swatch.modelData.name
+                    color: root.fg
+                    opacity: swatch.selected ? 0.95 : 0.6
+                    font.family: root.family; font.pixelSize: Style.font.caption
+                    font.weight: swatch.selected ? Font.DemiBold : Font.Normal
+                  }
+                }
+                MouseArea {
+                  id: swatchMouse
+                  anchors.fill: parent
+                  hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                  enabled: root.loaded
+                  onEntered: root.cursor = 1
+                  onClicked: root.setTheme(swatch.modelData.id)
+                }
+              }
+            }
+          }
         }
 
         PanelSeparator { foreground: root.fg }
@@ -408,10 +563,10 @@ Panel {
             width: parent.width - addButton.width - parent.spacing
             foreground: root.fg
             placeholderText: "Add a word or name"
-            hasCursor: root.cursor === 1 && !activeFocus
+            hasCursor: root.cursor === 2 && !activeFocus
             onTextChanged: root.draft = text
             onAccepted: root.addWord()
-            onActiveFocusChanged: if (activeFocus) root.cursor = 1
+            onActiveFocusChanged: if (activeFocus) root.cursor = 2
             Keys.onPressed: function(event) {
               if (event.key === Qt.Key_Escape) { keyboard.forceActiveFocus(); event.accepted = true }
             }
@@ -479,10 +634,10 @@ Panel {
           foreground: root.fg
           fontFamily: root.family
           bordered: true
-          hasCursor: root.cursor === 2
+          hasCursor: root.cursor === 3
           enabled: root.service === "active" && root.daemon === "idle"
           onClicked: root.preview()
-          onHovered: function(h) { if (h) root.cursor = 2 }
+          onHovered: function(h) { if (h) root.cursor = 3 }
         }
         Item {
           width: parent.width

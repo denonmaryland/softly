@@ -13,11 +13,9 @@ namespace Softly;
 /// </summary>
 public sealed class PillRenderer
 {
-    private readonly Palette palette;
+    private Palette palette = Palette.Current;
     private static readonly CultureInfo TimerCulture = CultureInfo.GetCultureInfo("en-US");
     private readonly Typeface timerFace = new(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Medium, FontStretches.Normal);
-
-    public PillRenderer(Palette palette) { this.palette = palette; }
 
     private static Geometry Capsule(Rect rect)
     {
@@ -39,6 +37,8 @@ public sealed class PillRenderer
 
     public void Draw(DrawingContext dc, PillFrame f, double pixelsPerDip)
     {
+        // Read per frame so a style picked in Preferences shows on the next one.
+        palette = Palette.Current;
         double p = f.Presence;
         var size = PillGeometry.PanelSize;
         // The whole surface is composited once, then faded, lifted and scaled.
@@ -67,20 +67,21 @@ public sealed class PillRenderer
 
         // Lifted: a soft ambient shadow and a tight contact shadow, drawn as
         // stacked translucent capsules (DrawingContext has no blur).
+        bool light = palette.IsLight;
         for (int i = 0; i < 6; i++)
         {
             double spread = 2 + i * 2.2;
             var rect = new Rect(-spread, 7 - spread * 0.4, w + spread * 2, h + spread * 2 * 0.9);
-            dc.DrawGeometry(new RGBA(0, 0, 0, 0.055).Brush, null, Capsule(rect));
+            dc.DrawGeometry(new RGBA(0, 0, 0, light ? 0.018 : 0.055).Brush, null, Capsule(rect));
         }
-        dc.DrawGeometry(new RGBA(0, 0, 0, 0.22).Brush, null, Capsule(new Rect(0.5, 1.5, w - 1, h - 1)));
+        dc.DrawGeometry(new RGBA(0, 0, 0, light ? 0.08 : 0.22).Brush, null, Capsule(new Rect(0.5, 1.5, w - 1, h - 1)));
 
-        dc.DrawGeometry(new RGBA(0, 0, 0, 0.55).Brush, null, Capsule(new Rect(-1, -1, w + 2, h + 2)));
+        dc.DrawGeometry(new RGBA(0, 0, 0, light ? 0.14 : 0.55).Brush, null, Capsule(new Rect(-1, -1, w + 2, h + 2)));
         // Lit chamfer: dark lower lip and lit upper lip peek out around the face.
-        dc.DrawGeometry(bg.Darker(1.1).Tint(new RGBA(0, 0, 0, 0.45)).Brush, null, Capsule(full));
-        dc.DrawGeometry(bg.Lighter(1.13).Tint(new RGBA(1, 0.98, 0.92, 0.18)).Brush, null, Capsule(new Rect(0, 0, w, h - 1)));
+        dc.DrawGeometry(bg.Darker(1.1).Tint(new RGBA(0, 0, 0, light ? 0.12 : 0.45)).Brush, null, Capsule(full));
+        dc.DrawGeometry(bg.Lighter(1.13).Tint(new RGBA(1, 0.98, 0.92, light ? 0.6 : 0.18)).Brush, null, Capsule(new Rect(0, 0, w, h - 1)));
         var face = new Rect(0, 1, w, h - 2);
-        dc.DrawGeometry(Vertical(face, (bg.Lighter(1.13), 0), (bg, 0.5), (bg.Darker(1.1), 1)), null, Capsule(face));
+        dc.DrawGeometry(Vertical(face, (bg.Lighter(light ? 1.03 : 1.13), 0), (bg, 0.5), (bg.Darker(1.1), 1)), null, Capsule(face));
     }
 
     // Groove and waveform
@@ -96,7 +97,7 @@ public sealed class PillRenderer
         var full = new Rect(0, 0, g.Width, g.Height);
         // Lower lip catches the backlight; the upper edge falls into shadow.
         dc.DrawGeometry(floor.Tint(accent.Alpha(0.12 + 0.1 * f.Glow)).Brush, null, Capsule(full));
-        dc.DrawGeometry(floor.Darker(1.6).Brush, null, Capsule(new Rect(0, 0, g.Width, g.Height - 1)));
+        dc.DrawGeometry(floor.Darker(palette.IsLight ? 1.15 : 1.6).Brush, null, Capsule(new Rect(0, 0, g.Width, g.Height - 1)));
         var floorRect = new Rect(0, 1.25, g.Width, g.Height - 2.25);
         dc.DrawGeometry(floor.Brush, null, Capsule(floorRect));
 

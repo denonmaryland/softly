@@ -98,7 +98,7 @@ public sealed class PillWindow : Window
 public sealed class PillSurface : FrameworkElement
 {
     private readonly PillModel model;
-    private readonly PillRenderer renderer = new(new Palette());
+    private readonly PillRenderer renderer = new();
     private bool running;
     private Point pressStart;
 

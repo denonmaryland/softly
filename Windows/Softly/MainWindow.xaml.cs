@@ -27,6 +27,7 @@ public partial class MainWindow : Window
             e.Cancel = true;
             Hide();
         };
+        BuildThemeSwatches();
         Bind();
     }
 
@@ -51,6 +52,13 @@ public partial class MainWindow : Window
         ModelNote.Visibility = state.DownloadPhase == ModelDownloader.Phase.Failed && state.DownloadError.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         HookText.Text = state.HotkeyRunning ? "✓ Right Alt is reserved for Softly while it runs" : "○ The keyboard hook could not start; restart Softly";
         HookText.Foreground = state.HotkeyRunning ? Green : Muted;
+        foreach (var (id, ring, label) in themeSwatches)
+        {
+            bool selected = id == state.PillTheme;
+            ring.BorderBrush = selected ? (Brush)FindResource("Accent") : Brushes.Transparent;
+            label.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
+            label.Foreground = selected ? (Brush)FindResource("Ink") : Muted;
+        }
         WordList.ItemsSource = state.Vocabulary;
         PromptText.Text = state.PromptText;
         VersionText.Text = "Softly " + Updater.CurrentVersion + " · checked quietly every few hours";
@@ -123,6 +131,63 @@ public partial class MainWindow : Window
 
     private void SoundsChanged(object sender, RoutedEventArgs e) => state.SoundsEnabled = SoundsSwitch.IsChecked == true;
     private void MediaChanged(object sender, RoutedEventArgs e) => state.PauseMedia = MediaSwitch.IsChecked == true;
+
+    private void PreviewClick(object sender, RoutedEventArgs e) => state.PreviewPill();
+
+    private readonly List<(string id, Border ring, TextBlock label)> themeSwatches = new();
+
+    /// <summary>
+    /// One small pill per style: capsule, groove, backlight and a few bars.
+    /// Picking one saves it and plays the silent preview.
+    /// </summary>
+    private void BuildThemeSwatches()
+    {
+        foreach (var theme in PillTheme.All)
+        {
+            var palette = new Palette(theme);
+            var bg = palette.Background;
+            var face = new LinearGradientBrush(bg.Lighter(palette.IsLight ? 1.03 : 1.13).Color, bg.Darker(1.1).Color, 90);
+            var glow = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0) };
+            glow.GradientStops.Add(new GradientStop(palette.Accent.Alpha(0).Color, 0));
+            glow.GradientStops.Add(new GradientStop(palette.Accent.Alpha(0.55).Color, 0.5));
+            glow.GradientStops.Add(new GradientStop(palette.Accent.Alpha(0).Color, 1));
+
+            var bars = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            foreach (double h in new[] { 5.0, 9, 13, 8, 11, 6, 4 })
+                bars.Children.Add(new Border { Width = 2, Height = h, CornerRadius = new CornerRadius(1), Background = palette.Foreground.Brush, Margin = new Thickness(1.5, 0, 1.5, 0) });
+            var groove = new Grid { Margin = new Thickness(4, 4, 26, 4) };
+            groove.Children.Add(new Border { CornerRadius = new CornerRadius(9), Background = palette.Floor.Brush });
+            groove.Children.Add(new Border { CornerRadius = new CornerRadius(9), Background = glow });
+            groove.Children.Add(bars);
+            var capsule = new Grid { Width = 96, Height = 26 };
+            capsule.Children.Add(new Border
+            {
+                CornerRadius = new CornerRadius(13), Background = face,
+                BorderBrush = new RGBA(0, 0, 0, palette.IsLight ? 0.12 : 0.4).Brush, BorderThickness = new Thickness(1),
+            });
+            capsule.Children.Add(groove);
+            capsule.Children.Add(new System.Windows.Shapes.Ellipse
+            {
+                Width = 4, Height = 4, Fill = palette.Foreground.Alpha(0.76).Brush,
+                HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0),
+            });
+
+            var ring = new Border { Child = capsule, Padding = new Thickness(5), CornerRadius = new CornerRadius(10), BorderThickness = new Thickness(2), BorderBrush = Brushes.Transparent };
+            var label = new TextBlock { Text = theme.Name, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
+            var cell = new StackPanel { Width = 118, Margin = new Thickness(0, 0, 6, 14), Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = theme.Name + " pill" };
+            cell.Children.Add(ring);
+            cell.Children.Add(label);
+            string id = theme.Id;
+            cell.MouseLeftButtonUp += (_, _) =>
+            {
+                if (state.PillTheme == id) return;
+                state.PillTheme = id;
+                state.PreviewPill();
+            };
+            ThemeGrid.Children.Add(cell);
+            themeSwatches.Add((id, ring, label));
+        }
+    }
 
     private void ModelActionClick(object sender, RoutedEventArgs e)
     {

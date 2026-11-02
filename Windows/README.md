@@ -37,7 +37,7 @@ Settings persist in `%APPDATA%\Softly\settings.json`; a log lands in
 | Hotkey | Right Alt (swallowed, so apps never see a bare Alt) | Right Option | F9 |
 | Paste | Clipboard + synthetic Ctrl+V | Clipboard + ⌘V | Voxtype output helper |
 | Media pausing | System media sessions (any player) | Music, Spotify via AppleScript | Voxtype `pause_media` |
-| Accent colour | Windows accent | macOS accent | Omarchy theme |
+| Pill style | 11 styles in Preferences (Midnight uses the Windows accent) | 11 styles in Preferences (Midnight uses the macOS accent) | Follows the Omarchy theme |
 | Permissions | None to grant; microphone privacy must allow desktop apps | Mic, Input Monitoring, Accessibility | n/a |
 
 Right Alt is AltGr on some keyboard layouts (German, Nordic, and others);
