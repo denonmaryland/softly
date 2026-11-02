@@ -636,7 +636,8 @@ Panel {
               Text { text: "Language"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body }
               Text {
                 width: parent.width; wrapMode: Text.WordWrap
-                text: root.languageName + (root.language === "en" ? "" : " · uses the multilingual model")
+                text: root.speechModel === "parakeet" ? "Parakeet detects the language itself"
+                  : root.languageName + (root.language === "en" ? "" : " · uses the multilingual model")
                 color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
               }
             }
@@ -705,6 +706,7 @@ Panel {
               width: parent.width; wrapMode: Text.WordWrap
               text: root.download && root.download.phase === "failed" ? "Download failed · " + (root.download.error || "try again")
                 : root.speechModel === "" && root.model ? root.model.replace(/^ggml-/, "").replace(/\.bin$/, "") + " · set in Voxtype"
+                : root.speechModel === "parakeet" ? "Parakeet · fast on the CPU; vocabulary hints don't apply, fixes do"
                 : "Accurate is best with names and code; Fast is lightest. Others download once."
               color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
             }
@@ -713,7 +715,7 @@ Panel {
             id: modelChips
             width: parent.width
             spacing: Style.space(6)
-            readonly property real cell: Math.floor((width - 2 * spacing) / 3)
+            readonly property real cell: Math.floor((width - (root.models.length - 1) * spacing) / Math.max(1, root.models.length))
             Repeater {
               model: root.models
               delegate: Rectangle {

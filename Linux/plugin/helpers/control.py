@@ -349,6 +349,7 @@ def teardown():
     run(["hyprctl", "reload"])
     if shutil.which("voxtype"):
         backup(VOXTYPE_CONFIG)
+        errors += use_whisper_engine()
         for key in VOXTYPE_KEYS:
             run(["voxtype", "config", "unset", key])
         run(["systemctl", "--user", "restart", "voxtype"], timeout=30)
@@ -454,7 +455,20 @@ MODELS = [
      "en": {"file": "ggml-small.en-q5_1.bin", "sha256": "bfdff4894dcb76bbf647d56263ea2a96645423f1669176f4844a1bf8e478ad30", "sizeMB": 190},
      "multi": {"file": "ggml-small-q5_1.bin", "sha256": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb", "sizeMB": 190}},
     {"id": "accurate", "name": "Accurate", "detail": "Best with names and code", "en": TURBO, "multi": TURBO},
+    # NVIDIA Parakeet through Voxtype's ONNX build: fast, 25 European languages
+    # detected on its own, but no vocabulary hints (fixes still apply).
+    {"id": "parakeet", "name": "Parakeet", "detail": "Fast on CPU · detects 25 languages · no vocabulary hints",
+     "engine": "parakeet", "dir": "parakeet-tdt-0.6b-v3-int8", "sizeMB": 640},
 ]
+# Parakeet needs Voxtype's ONNX binary; this drop-in runs the daemon with it.
+ENGINE_DROPIN = os.path.join(config_home(), "systemd", "user", "voxtype.service.d", "30-softly-engine.conf")
+
+
+def onnx_binary():
+    flags = read_text("/proc/cpuinfo")
+    name = "voxtype-onnx-avx512" if " avx512f" in flags else "voxtype-onnx-avx2"
+    path = os.path.join("/usr/lib/voxtype", name)
+    return path if os.path.exists(path) else None
 # Same list as Languages.swift and Languages.cs.
 LANGUAGES = [
     ("en", "English"), ("auto", "Detect automatically"),
@@ -471,8 +485,17 @@ def current_language():
 
 def model_file(model, language=None):
     """The file a model needs for the language: English-only, or multilingual."""
+    if model.get("engine") == "parakeet":
+        return {"file": model["dir"], "sizeMB": model["sizeMB"]}
     language = current_language() if language is None else language
     return model["en"] if language == "en" else model["multi"]
+
+
+def model_downloaded(model, language=None):
+    path = os.path.join(models_dir(), model_file(model, language)["file"])
+    if model.get("engine") == "parakeet":
+        return os.path.exists(os.path.join(path, "encoder-model.int8.onnx"))
+    return os.path.exists(path)
 MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/"
 DOWNLOAD = os.path.join(os.path.dirname(RECENT), "download.json")
 
@@ -488,8 +511,10 @@ def model_by_id(model_id):
 
 
 def current_model_id(model_setting):
+    if os.path.exists(ENGINE_DROPIN) and voxtype_get("engine") == "parakeet":
+        return "parakeet"
     name = os.path.basename(model_setting or "")
-    return next((m["id"] for m in MODELS if name in (m["en"]["file"], m["multi"]["file"])), "")
+    return next((m["id"] for m in MODELS if "en" in m and name in (m["en"]["file"], m["multi"]["file"])), "")
 
 
 def read_download():
@@ -518,6 +543,26 @@ def write_download(data):
 
 
 def use_model(model):
+    if model.get("engine") == "parakeet":
+        binary = onnx_binary()
+        if not binary:
+            return ["Voxtype's ONNX build is not installed, so Parakeet can't run here."]
+        for key, value in (("parakeet.model", model["dir"]), ("parakeet.model_type", "tdt"), ("engine", "parakeet")):
+            # The Whisper build refuses Parakeet keys; the ONNX build writes them.
+            code, out, err = run([binary, "config", "set", key, value])
+            if code != 0:
+                return [err or out or "Could not write the Voxtype config."]
+        try:
+            os.makedirs(os.path.dirname(ENGINE_DROPIN), exist_ok=True)
+            atomic_write(ENGINE_DROPIN, "# Softly: Parakeet needs Voxtype's ONNX build. Removed when a Whisper model is picked.\n"
+                                        "[Service]\nExecStart=\nExecStart=%s daemon\n" % binary)
+        except OSError as e:
+            return ["Could not switch Voxtype's engine: " + str(e)]
+        run(["systemctl", "--user", "daemon-reload"])
+        return restart()
+    errors = use_whisper_engine()
+    if errors:
+        return errors
     path = os.path.join(models_dir(), model_file(model)["file"])
     code, out, err = run(["voxtype", "config", "set", "whisper.model", path])
     if code != 0:
@@ -525,11 +570,26 @@ def use_model(model):
     return restart()
 
 
+def use_whisper_engine():
+    """Undoes Parakeet: Whisper engine, and the daemon's own binary again."""
+    if os.path.exists(ENGINE_DROPIN):
+        try:
+            os.remove(ENGINE_DROPIN)
+        except OSError as e:
+            return ["Could not switch Voxtype's engine: " + str(e)]
+        run(["systemctl", "--user", "daemon-reload"])
+    if voxtype_get("engine") not in (None, "whisper"):
+        code, out, err = run(["voxtype", "config", "set", "engine", "whisper"])
+        if code != 0:
+            return [err or out or "Could not write the Voxtype config."]
+    return []
+
+
 def choose_model(model_id):
     model = model_by_id(model_id)
     if not model:
         return ["Unknown speech model: " + model_id]
-    if os.path.exists(os.path.join(models_dir(), model_file(model)["file"])):
+    if model_downloaded(model):
         cancel_download()
         return use_model(model)
     current = read_download()
@@ -580,6 +640,23 @@ def download_model(model_id):
 
     signal.signal(signal.SIGTERM, stop)
     report("downloading")
+    if model.get("engine") == "parakeet":
+        # Voxtype's ONNX build fetches and checks its own model files.
+        binary = onnx_binary()
+        code, out, err = (1, "", "Voxtype's ONNX build is not installed.") if not binary else \
+            run([binary, "setup", "--download", "--model", model["dir"], "--quiet", "--no-post-install"], timeout=3600)
+        if code != 0 or not model_downloaded(model):
+            report("failed", 0, (err or out or "Download failed").strip().splitlines()[-1])
+            return
+        errors = use_model(model)
+        if errors:
+            report("failed", 0, errors[0])
+        else:
+            try:
+                os.remove(DOWNLOAD)
+            except OSError:
+                pass
+        return
     try:
         os.makedirs(models_dir(), exist_ok=True)
         req = urllib.request.Request(MODEL_URL + target["file"], headers={"User-Agent": "Softly/" + plugin_version() + " (Omarchy)"})
@@ -643,7 +720,6 @@ def state(errors=None):
     code, daemon, _ = run(["voxtype", "status"])
     _, model, _ = run(["voxtype", "config", "get", "whisper.model"])
     errors = errors or []
-    folder = models_dir()
     language = current_language()
     return {
         "ok": not errors,
@@ -658,7 +734,7 @@ def state(errors=None):
         "model": os.path.basename(model) if model else "",
         "speechModel": current_model_id(model),
         "models": [{"id": m["id"], "name": m["name"], "detail": m["detail"], "sizeMB": model_file(m, language)["sizeMB"],
-                    "downloaded": os.path.exists(os.path.join(folder, model_file(m, language)["file"]))} for m in MODELS],
+                    "downloaded": model_downloaded(m, language)} for m in MODELS if m.get("engine") != "parakeet" or onnx_binary()],
         "language": language,
         "languages": [{"code": c, "name": n} for c, n in LANGUAGES],
         "download": read_download(),
