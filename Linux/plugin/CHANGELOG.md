@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.9
+
+- No changes to the plugin; this version keeps it in step with the Mac and
+  Windows apps.
+
 ## 0.2.8
 
 - Pick your dictation key in the popover: Dictation key → Change offers F9,
