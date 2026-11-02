@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- No plugin changes; the version follows the Windows app, which now adds
+  itself to the Start menu.
+
 ## 0.2.1
 
 - No plugin changes; the version follows the Mac and Windows apps, which
