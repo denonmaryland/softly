@@ -40,6 +40,7 @@ public static class Settings
         public uint HotkeyVk { get; set; } = 0xA5;
         public List<string> Vocabulary { get; set; } = new(DefaultVocabulary);
         public string SpeechModel { get; set; } = "balanced";
+        public bool SubmitWord { get; set; }
         public List<Replacement> Replacements { get; set; } = new();
     }
 
@@ -113,6 +114,13 @@ public static class Settings
     {
         get => new(Load().Vocabulary);
         set { Load().Vocabulary = new List<string>(value); Save(); }
+    }
+
+    /// <summary>Ending a dictation with "submit" presses Enter after the paste.</summary>
+    public static bool SubmitWord
+    {
+        get => Load().SubmitWord;
+        set { Load().SubmitWord = value; Save(); }
     }
 
     /// <summary>Id of the speech model in use, from SpeechModel.All.</summary>

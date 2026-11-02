@@ -304,6 +304,12 @@
               </Border>
               <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
                 <DockPanel>
+                  <CheckBox x:Name="SubmitSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Click="SubmitChanged"/>
+                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Say “submit” to send" Style="{StaticResource RowTitle}"/><TextBlock Text="End with “submit” and Softly presses Enter after pasting" Style="{StaticResource RowSub}"/></StackPanel>
+                </DockPanel>
+              </Border>
+              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
+                <DockPanel>
                   <CheckBox x:Name="SoundsSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Click="SoundsChanged"/>
                   <StackPanel Margin="0,0,20,0"><TextBlock Text="Play sounds" Style="{StaticResource RowTitle}"/><TextBlock Text="A subtle cue when recording starts and ends" Style="{StaticResource RowSub}"/></StackPanel>
                 </DockPanel>

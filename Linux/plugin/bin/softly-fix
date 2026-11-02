@@ -12,6 +12,10 @@ Windows/Softly.Core/Replacements.cs: matching ignores case and only takes
 whole words; spaces in a rule match any run of spaces or hyphens; the longest
 rule wins; an empty "to" deletes the phrase and tidies the punctuation left
 behind. Any failure prints the transcript unchanged.
+
+With "submitWord" on, a final spoken "submit" is stripped and softly-paste
+presses Enter after the paste (flag file in the runtime dir), as
+SubmitWord.swift and SubmitWord.cs do.
 """
 import json
 import os
@@ -29,14 +33,31 @@ def settings_path():
     return os.path.join(base, "omarchy", "softly.json")
 
 
-def load_rules():
+SUBMIT = re.compile(r"^(.*?)[\s,.;:!?-]*(?<![^\W_])submit[\s.!?]*$", re.IGNORECASE | re.DOTALL)
+SUBMIT_FLAG = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "softly-submit")
+
+
+def load_settings():
     try:
         with open(settings_path()) as f:
             data = json.load(f)
-        rules = data.get("replacements", []) if isinstance(data, dict) else []
-        return [(str(r.get("from", "")), str(r.get("to", ""))) for r in rules if isinstance(r, dict)]
+        return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
+        return {}
+
+
+def load_rules(settings=None):
+    settings = load_settings() if settings is None else settings
+    rules = settings.get("replacements", [])
+    if not isinstance(rules, list):
         return []
+    return [(str(r.get("from", "")), str(r.get("to", ""))) for r in rules if isinstance(r, dict)]
+
+
+def split_submit(text):
+    """("Fix it, submit." -> ("Fix it", True)); anything else is left alone."""
+    m = SUBMIT.match(text)
+    return (m.group(1).strip(), True) if m else (text, False)
 
 
 def key(phrase):
@@ -85,7 +106,17 @@ def tidy(text, original):
 def main():
     text = sys.stdin.read()
     try:
-        out = apply(text.strip(), load_rules())
+        os.remove(SUBMIT_FLAG)
+    except OSError:
+        pass
+    try:
+        settings = load_settings()
+        out = apply(text.strip(), load_rules(settings))
+        if settings.get("submitWord") is True:
+            out, submit = split_submit(out)
+            if submit:
+                with open(SUBMIT_FLAG, "w"):
+                    pass
     except Exception:  # never lose a dictation over a bad rule
         out = text
     sys.stdout.write(out)

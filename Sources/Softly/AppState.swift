@@ -23,6 +23,9 @@ final class AppState: ObservableObject {
     @Published var tapToStart = Settings.tapToStart {
         didSet { Settings.tapToStart = tapToStart }
     }
+    @Published var submitWord = Settings.submitWord {
+        didSet { Settings.submitWord = submitWord }
+    }
     @Published var hotkey = Hotkey.current {
         didSet { Settings.hotkeyCode = hotkey.keyCode; applyHotkey(hotkey) }
     }

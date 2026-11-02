@@ -19,6 +19,7 @@ public sealed class AppState : INotifyPropertyChanged
     private bool pauseMedia = Settings.PauseMedia;
     private string pillTheme = Settings.PillTheme;
     private bool tapToStart = Settings.TapToStart;
+    private bool submitWord = Settings.SubmitWord;
     private Hotkey hotkey = Hotkey.Current;
     private bool capturingHotkey;
     private string hotkeyNote = "";
@@ -52,6 +53,12 @@ public sealed class AppState : INotifyPropertyChanged
     {
         get => tapToStart;
         set { if (Set(ref tapToStart, value)) Settings.TapToStart = value; }
+    }
+
+    public bool SubmitWord
+    {
+        get => submitWord;
+        set { if (Set(ref submitWord, value)) Settings.SubmitWord = value; }
     }
 
     /// <summary>The dictation key; saving it also re-points the keyboard hook.</summary>

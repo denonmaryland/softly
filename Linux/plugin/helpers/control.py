@@ -4,6 +4,7 @@
     control.py state                 -> JSON snapshot
     control.py set sounds true|false -> ~/.config/omarchy/softly.json
     control.py set tap true|false    -> tap to start and stop (false: hold-only), same file
+    control.py set submit true|false -> a final spoken "submit" presses Enter, same file
     control.py set theme <id>        -> pill style (see Themes.js), same file
     control.py add <word>            -> Voxtype whisper.initial_prompt, restart daemon
     control.py remove <word>         -> same
@@ -176,6 +177,7 @@ VOXTYPE_KEYS = {
     "output.pre_output_command": PASTE_DEST + " save",
     "output.post_output_command": PASTE_DEST + " paste",
     "output.post_process.command": FIX_DEST,
+    "output.post_process.fallback_on_empty": "false",  # all filler, or just "submit": type nothing
     "osd.enabled": "false",      # the pill replaces Voxtype's overlay
     "hotkey.enabled": "false",   # Hyprland drives it
 }
@@ -609,6 +611,7 @@ def state(errors=None):
         "errors": errors,
         "sounds": settings.get("sounds", True) is not False,
         "tapToStart": settings.get("tapToStart", True) is not False,
+        "submitWord": settings.get("submitWord") is True,
         "pillTheme": settings.get("pillTheme") if isinstance(settings.get("pillTheme"), str) else "omarchy",
         "vocabulary": current_words(),
         "service": active or "unknown",
@@ -635,6 +638,10 @@ def main(argv):
     elif cmd == "set" and len(argv) == 4 and argv[2] == "tap":
         settings = read_settings()
         settings["tapToStart"] = argv[3].lower() in ("1", "true", "yes", "on")
+        write_settings(settings)
+    elif cmd == "set" and len(argv) == 4 and argv[2] == "submit":
+        settings = read_settings()
+        settings["submitWord"] = argv[3].lower() in ("1", "true", "yes", "on")
         write_settings(settings)
     elif cmd == "set" and len(argv) == 4 and argv[2] == "theme":
         if re.fullmatch(r"[a-z0-9-]{1,32}", argv[3]):

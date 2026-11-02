@@ -29,6 +29,7 @@ Panel {
   property bool sounds: true
   property string pillTheme: "omarchy"
   property bool tapToStart: true
+  property bool submitWord: false
   // The pill follows Omarchy by default; the fixed styles are for the Mac and
   // Windows apps mostly, so the grid stays folded away until asked for.
   property bool stylesOpen: false
@@ -83,6 +84,7 @@ Panel {
       sounds = s.sounds !== false
       pillTheme = s.pillTheme || "omarchy"
       tapToStart = s.tapToStart !== false
+      submitWord = s.submitWord === true
       vocabulary = s.vocabulary || []
       service = s.service || "unknown"
       daemon = s.daemon || "unknown"
@@ -120,6 +122,11 @@ Panel {
     tapToStart = on
     message = ""
     send(["set", "tap", on ? "true" : "false"])
+  }
+  function setSubmit(on) {
+    submitWord = on
+    message = ""
+    send(["set", "submit", on ? "true" : "false"])
   }
   function setTheme(id) {
     if (id === pillTheme) return
@@ -390,6 +397,15 @@ Panel {
           focusRing: root.cursor === 1
           onToggled: root.setTap(!root.tapToStart)
           onHoveredIn: root.cursor = 1
+        }
+
+        SwitchRow {
+          width: parent.width
+          title: "Say “submit” to send"
+          caption: "End with “submit” and Softly presses Enter after pasting"
+          checked: root.submitWord
+          enabled: !root.busy
+          onToggled: root.setSubmit(!root.submitWord)
         }
 
         // ---------- Dictation key: a short list that works on its own ----------

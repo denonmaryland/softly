@@ -95,7 +95,7 @@ public partial class App : Application
         state.InstallUpdate = () => updater.Install();
         updater.StartBackgroundChecks();
 
-        tray = new TrayIcon(state) { OpenWindow = OpenWindow, Quit = () => Shutdown() };
+        tray = new TrayIcon(state) { OpenWindow = OpenWindow, Quit = () => Shutdown(), Recent = () => engine?.Recent ?? Array.Empty<string>() };
 
         control = new ControlPipe(Dispatcher, command => command switch
         {

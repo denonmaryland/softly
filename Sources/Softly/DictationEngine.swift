@@ -10,6 +10,9 @@ final class DictationEngine {
     private(set) var state: RecorderState = .idle
     private(set) var modelStatus: Transcriber.Status = .loading
     var onStatusChange: () -> Void = {}
+    /// The last few dictations, newest first. Held in memory only, like the
+    /// Linux popover's list, so nothing said is ever written to disk.
+    private(set) var recent: [String] = []
 
     private var controller = GestureController()
     private let recorder = AudioRecorder()
@@ -144,14 +147,23 @@ final class DictationEngine {
     private func finish(_ transcript: String?) {
         state = .idle
         _ = controller.send(.reset, now: PillModel.now, state: state)
-        // "Heard this, type that" fixes; a transcript that was all filler is dropped.
-        let text = transcript.map { Replacements.apply($0, Settings.replacements) }
-            .flatMap { $0.isEmpty ? nil : $0 }
-        guard let text else {
+        // "Heard this, type that" fixes, then a final spoken "submit".
+        var text = transcript.map { Replacements.apply($0, Settings.replacements) }
+        var submit = false
+        if Settings.submitWord, let fixed = text {
+            let parts = SubmitWord.split(fixed)
+            text = parts.text
+            submit = parts.submit
+        }
+        // A transcript that was all filler is dropped, unless it said "submit".
+        guard let text, !text.isEmpty || submit else {
             hidePill()
             return
         }
-        Paster.paste(text)
+        if !text.isEmpty {
+            recent = [text] + recent.filter { $0 != text }.prefix(4)
+        }
+        Paster.paste(text, submit: submit)
         // Let the paste land, confirm with ✓, then close.
         let token = session
         after(0.075) { [weak self] in

@@ -45,6 +45,7 @@ public partial class MainWindow : Window
         StatusText.Text = ready ? "Ready to dictate" : state.StatusLine;
         SoundsSwitch.IsChecked = state.SoundsEnabled;
         TapSwitch.IsChecked = state.TapToStart;
+        SubmitSwitch.IsChecked = state.SubmitWord;
         ShortcutSub.Text = state.CapturingHotkey ? "Press " + Hotkey.Choices + " · Esc keeps the current one"
             : state.HotkeyNote.Length > 0 ? state.HotkeyNote
             : state.TapToStart ? "Tap to start and stop · or hold to talk" : "Hold to talk · let go to finish";
@@ -189,6 +190,7 @@ public partial class MainWindow : Window
 
     private void SoundsChanged(object sender, RoutedEventArgs e) => state.SoundsEnabled = SoundsSwitch.IsChecked == true;
     private void TapChanged(object sender, RoutedEventArgs e) => state.TapToStart = TapSwitch.IsChecked == true;
+    private void SubmitChanged(object sender, RoutedEventArgs e) => state.SubmitWord = SubmitSwitch.IsChecked == true;
     private void MediaChanged(object sender, RoutedEventArgs e) => state.PauseMedia = MediaSwitch.IsChecked == true;
 
     private void PreviewClick(object sender, RoutedEventArgs e) => state.PreviewPill();

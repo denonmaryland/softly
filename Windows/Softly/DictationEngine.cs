@@ -17,6 +17,12 @@ public sealed class DictationEngine
     public Transcriber.Status ModelStatus { get; private set; } = Transcriber.Status.Loading;
     public string Backend => transcriber.Backend;
     public Action OnStatusChange = () => { };
+    /// <summary>
+    /// The last few dictations, newest first. Held in memory only, like the
+    /// Linux popover's list, so nothing said is ever written to disk.
+    /// </summary>
+    public IReadOnlyList<string> Recent => recent;
+    private List<string> recent = new();
 
     private readonly GestureController controller = new();
     private readonly AudioRecorder recorder = new();
@@ -201,15 +207,19 @@ public sealed class DictationEngine
     {
         State = RecorderState.Idle;
         controller.Send(GestureEvent.Reset, PillModel.Now, State);
-        // "Heard this, type that" fixes; a transcript that was all filler is dropped.
+        // "Heard this, type that" fixes, then a final spoken "submit".
         string? text = transcript == null ? null : Replacements.Apply(transcript, Settings.Replacements);
-        if (string.IsNullOrEmpty(text)) text = null;
-        if (text == null)
+        bool submit = false;
+        if (text != null && Settings.SubmitWord) (text, submit) = SubmitWord.Split(text);
+        // A transcript that was all filler is dropped, unless it said "submit".
+        if (text == null || (text.Length == 0 && !submit))
         {
             HidePill();
             return;
         }
-        Paster.Paste(text, dispatcher);
+        if (text.Length > 0)
+            recent = new[] { text }.Concat(recent.Where(r => r != text).Take(4)).ToList();
+        Paster.Paste(text, dispatcher, submit);
         // Let the paste land, confirm with a check, then close.
         int token = session;
         Timing.After(0.075, () =>

@@ -72,8 +72,24 @@ recover_previous() {
   rm -rf "$state"
 }
 
+# softly-fix leaves this when the dictation ended with a spoken "submit".
+submit_flag="${XDG_RUNTIME_DIR:-/tmp}/softly-submit"
+
+press_return_if_asked() {
+  [[ -f $submit_flag ]] || return 0
+  local fresh
+  fresh=$(find "$submit_flag" -mmin -1 2>/dev/null)
+  rm -f "$submit_flag"
+  [[ -n $fresh ]] || return 0
+  sleep 0.12   # let the app take the paste first
+  send_shortcut "" Return
+}
+
 paste() {
-  [[ -f $state/armed ]] || exit 0
+  if [[ ! -f $state/armed ]]; then
+    press_return_if_asked   # "submit" on its own: nothing to paste, just Enter
+    exit 0
+  fi
   # Ignore stale state from an interrupted run.
   if [[ -z $(find "$state/armed" -mmin -1 2>/dev/null) ]]; then rm -rf "$state"; exit 0; fi
   rm -f "$state/armed"
@@ -81,6 +97,7 @@ paste() {
   wl-paste --no-newline --type text/plain >"$state/dictated" 2>/dev/null
   if [[ ! -s $state/dictated ]]; then
     recover_previous   # no clipboard output: recover without pasting
+    press_return_if_asked
     exit 0
   fi
 
@@ -103,6 +120,7 @@ paste() {
   else
     send_shortcut CTRL V
   fi
+  press_return_if_asked
 
   # Notify the overlay only after a real transcript was copied; no text is sent.
   omarchy-shell io.github.denonmaryland.softly complete >/dev/null 2>&1 || true

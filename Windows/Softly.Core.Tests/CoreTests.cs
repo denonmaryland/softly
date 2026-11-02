@@ -251,3 +251,22 @@ public class ReplacementTests
         Assert.Equal("Fine", Replacements.Apply("Fine", new[] { new Replacement("  ", "x") }));
     }
 }
+
+// Same cases as SubmitWordTests in Tests/DictationCoreTests and Linux/tests.
+public class SubmitWordTests
+{
+    [Fact]
+    public void TrailingSubmitIsStripped()
+    {
+        Assert.Equal(("Fix the failing test", true), SubmitWord.Split("Fix the failing test, submit."));
+        Assert.Equal(("Run it", true), SubmitWord.Split("Run it. Submit!"));
+        Assert.Equal(("", true), SubmitWord.Split("Submit."));
+    }
+
+    [Fact]
+    public void OtherSubmitsAreKept()
+    {
+        Assert.Equal(("Please resubmit", false), SubmitWord.Split("Please resubmit"));
+        Assert.Equal(("Submit the form tomorrow.", false), SubmitWord.Split("Submit the form tomorrow."));
+    }
+}

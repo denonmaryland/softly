@@ -16,9 +16,13 @@ public sealed class TrayIcon : IDisposable
     private readonly ToolStripMenuItem modelFolder = new("Show Model Folder");
     private readonly ToolStripMenuItem reload = new("Reload Model");
     private readonly ToolStripSeparator modelSeparator = new();
+    private readonly ToolStripMenuItem recent = new("Copy Recent Dictation");
+    private readonly ToolStripSeparator recentSeparator = new();
     private Icon? readyIcon, warnIcon;
 
     public Action OpenWindow = () => { };
+    /// <summary>The engine's last few dictations, newest first.</summary>
+    public Func<IReadOnlyList<string>> Recent = () => Array.Empty<string>();
     public Action Quit = () => { };
 
     public TrayIcon(AppState state)
@@ -27,6 +31,8 @@ public sealed class TrayIcon : IDisposable
         var menu = new ContextMenuStrip();
         menu.Items.Add(status);
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(recent);
+        menu.Items.Add(recentSeparator);
         menu.Items.Add("Open Softly…", null, (_, _) => OpenWindow());
         updates.Click += (_, _) => { if (state.UpdatePhase == Updater.Phase.Available) state.InstallUpdate(); else { state.CheckForUpdates(); OpenWindow(); } };
         menu.Items.Add(updates);
@@ -54,6 +60,16 @@ public sealed class TrayIcon : IDisposable
     public void Refresh()
     {
         status.Text = state.StatusLine;
+        // The tray takes focus from the app you were in, so these copy rather than paste.
+        recent.DropDownItems.Clear();
+        foreach (var text in Recent())
+        {
+            string t = text;
+            var entry = new ToolStripMenuItem(t.Length > 60 ? t[..57] + "…" : t) { ToolTipText = t };
+            entry.Click += (_, _) => { try { System.Windows.Clipboard.SetText(t); } catch (System.Runtime.InteropServices.COMException) { } };
+            recent.DropDownItems.Add(entry);
+        }
+        recent.Visible = recentSeparator.Visible = recent.DropDownItems.Count > 0;
         sounds.Checked = state.SoundsEnabled;
         updates.Text = state.UpdatePhase == Updater.Phase.Available ? "Update to Softly " + state.UpdateVersion + "…" : "Check for Updates…";
         bool modelTrouble = state.ModelStatus != Transcriber.Status.Ready;

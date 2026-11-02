@@ -24,6 +24,11 @@ struct PreferencesView: View {
                         .labelsHidden()
                         .toggleStyle(.switch)
                 }
+                PreferenceRow(title: "Say “submit” to send", subtitle: "End with “submit” and Softly presses Enter after pasting") {
+                    Toggle("Say submit to send", isOn: $state.submitWord)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
                 PreferenceRow(title: "Play sounds", subtitle: "A subtle cue when recording starts and ends") {
                     Toggle("Play sounds", isOn: $state.soundsEnabled)
                         .labelsHidden()

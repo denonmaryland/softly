@@ -46,5 +46,17 @@ class ReplacementTests(unittest.TestCase):
         self.assertEqual(fix.apply("Fine", [("  ", "x")]), "Fine")
 
 
+
+class SubmitWordTests(unittest.TestCase):
+    def test_trailing_submit_is_stripped(self):
+        self.assertEqual(fix.split_submit("Fix the failing test, submit."), ("Fix the failing test", True))
+        self.assertEqual(fix.split_submit("Run it. Submit!"), ("Run it", True))
+        self.assertEqual(fix.split_submit("Submit."), ("", True))
+
+    def test_other_submits_are_kept(self):
+        self.assertEqual(fix.split_submit("Please resubmit"), ("Please resubmit", False))
+        self.assertEqual(fix.split_submit("Submit the form tomorrow."), ("Submit the form tomorrow.", False))
+
+
 if __name__ == "__main__":
     unittest.main()

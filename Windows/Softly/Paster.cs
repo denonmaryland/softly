@@ -14,8 +14,17 @@ public static class Paster
     /// <summary>Tags our synthetic keys so the hotkey hook ignores them.</summary>
     public static readonly IntPtr InjectedMarker = (IntPtr)0x50F7;
 
-    public static void Paste(string text, Dispatcher dispatcher)
+    /// <summary>
+    /// Pastes <paramref name="text"/>, then presses Enter when <paramref name="submit"/>
+    /// is set (the spoken "submit"). Empty text with submit just presses Enter.
+    /// </summary>
+    public static void Paste(string text, Dispatcher dispatcher, bool submit = false)
     {
+        if (text.Length == 0)
+        {
+            if (submit) Send(VK_RETURN);
+            return;
+        }
         for (int attempt = 0; attempt < 5; attempt++)
         {
             try
@@ -30,11 +39,26 @@ public static class Paster
         }
         // Give the clipboard a moment to publish before the shortcut.
         var timer = new DispatcherTimer(DispatcherPriority.Normal, dispatcher) { Interval = TimeSpan.FromMilliseconds(30) };
-        timer.Tick += (_, _) => { timer.Stop(); SendControlV(); };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            SendControlV();
+            if (!submit) return;
+            // Give the app a moment to take the paste before Enter.
+            var enter = new DispatcherTimer(DispatcherPriority.Normal, dispatcher) { Interval = TimeSpan.FromMilliseconds(120) };
+            enter.Tick += (_, _) => { enter.Stop(); Send(VK_RETURN); };
+            enter.Start();
+        };
         timer.Start();
     }
 
-    private const ushort VK_CONTROL = 0x11, VK_V = 0x56;
+    private const ushort VK_CONTROL = 0x11, VK_V = 0x56, VK_RETURN = 0x0D;
+
+    private static void Send(ushort vk)
+    {
+        var inputs = new[] { Key(vk, false), Key(vk, true) };
+        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+    }
     private const uint KEYEVENTF_KEYUP = 0x0002;
 
     private static void SendControlV()

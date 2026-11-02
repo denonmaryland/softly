@@ -51,6 +51,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "tapToStart") }
     }
 
+    /// Ending a dictation with "submit" presses Enter after the paste.
+    static var submitWord: Bool {
+        get { UserDefaults.standard.object(forKey: "submitWord") as? Bool ?? false }
+        set { UserDefaults.standard.set(newValue, forKey: "submitWord") }
+    }
+
     /// The pill's style, an id from PillTheme.all.
     /// Virtual key code of the dictation key; Right Option by default.
     static var hotkeyCode: Int64 {

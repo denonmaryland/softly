@@ -7,21 +7,32 @@ import CoreGraphics
 @MainActor
 enum Paster {
     nonisolated private static let vKey: CGKeyCode = 9 // kVK_ANSI_V
+    nonisolated private static let returnKey: CGKeyCode = 36 // kVK_Return
 
-    static func paste(_ text: String) {
+    /// Pastes `text`, then presses Return when `submit` is set (the spoken
+    /// "submit"). Empty text with submit just presses Return.
+    static func paste(_ text: String, submit: Bool = false) {
+        guard !text.isEmpty else {
+            if submit { send(returnKey) }
+            return
+        }
         let board = NSPasteboard.general
         board.clearContents()
         board.setString(text, forType: .string)
-        // Give the pasteboard server a moment to publish before the shortcut.
-        after(0.03) { sendCommandV() }
+        // Give the pasteboard server a moment to publish before the shortcut,
+        // and the app a moment to take the paste before Return.
+        after(0.03) {
+            send(vKey, flags: .maskCommand)
+            if submit { after(0.12) { send(returnKey) } }
+        }
     }
 
-    nonisolated private static func sendCommandV() {
+    nonisolated private static func send(_ key: CGKeyCode, flags: CGEventFlags = []) {
         let source = CGEventSource(stateID: .combinedSessionState)
-        let down = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true)
-        let up = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false)
-        down?.flags = .maskCommand
-        up?.flags = .maskCommand
+        let down = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: true)
+        let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false)
+        down?.flags = flags
+        up?.flags = flags
         down?.post(tap: .cghidEventTap)
         up?.post(tap: .cghidEventTap)
     }

@@ -195,3 +195,20 @@ final class ReplacementTests: XCTestCase {
         XCTAssertEqual(Replacements.apply("Fine", [Replacement(from: "  ", to: "x")]), "Fine")
     }
 }
+
+// Same cases as SubmitWordTests in Windows/Softly.Core.Tests and Linux/tests.
+final class SubmitWordTests: XCTestCase {
+    func testTrailingSubmitIsStripped() {
+        XCTAssertEqual(SubmitWord.split("Fix the failing test, submit.").text, "Fix the failing test")
+        XCTAssertTrue(SubmitWord.split("Fix the failing test, submit.").submit)
+        XCTAssertEqual(SubmitWord.split("Run it. Submit!").text, "Run it")
+        XCTAssertEqual(SubmitWord.split("Submit.").text, "")
+        XCTAssertTrue(SubmitWord.split("Submit.").submit)
+    }
+
+    func testOtherSubmitsAreKept() {
+        XCTAssertFalse(SubmitWord.split("Please resubmit").submit)
+        XCTAssertFalse(SubmitWord.split("Submit the form tomorrow.").submit)
+        XCTAssertEqual(SubmitWord.split("Submit the form tomorrow.").text, "Submit the form tomorrow.")
+    }
+}

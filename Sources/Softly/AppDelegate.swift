@@ -201,6 +201,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(status)
         menu.addItem(.separator())
 
+        // The menu bar menu doesn't take focus, so these paste into the app
+        // you were in, the same way a dictation does.
+        if !engine.recent.isEmpty {
+            let recent = NSMenu()
+            for text in engine.recent {
+                let short = text.count > 60 ? String(text.prefix(57)) + "…" : text
+                let entry = item(short, #selector(pasteRecent(_:)))
+                entry.representedObject = text
+                entry.toolTip = text
+                recent.addItem(entry)
+            }
+            menu.addItem(submenu(recent, title: "Paste Recent Dictation"))
+            menu.addItem(.separator())
+        }
+
         menu.addItem(item("Open Softly…", #selector(openWindow), key: ","))
         if case .available(let version) = state.update {
             menu.addItem(item("Update to Softly \(version)…", #selector(installUpdate)))
@@ -238,6 +253,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openWindow() { mainWindow.show() }
+    @objc private func pasteRecent(_ sender: NSMenuItem) {
+        guard let text = sender.representedObject as? String else { return }
+        // Wait for the menu to close and focus to settle back on the app.
+        after(0.15) { Paster.paste(text) }
+    }
     @objc private func previewPill() { engine.preview() }
     @objc private func checkForUpdates() { updater.check(); mainWindow.show() }
     @objc private func installUpdate() { updater.install() }
