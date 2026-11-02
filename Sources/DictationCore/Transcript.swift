@@ -15,7 +15,39 @@ public enum Transcript {
             return s.isEmpty ? nil : s
         }
         let text = kept.joined(separator: " ")
-        return text.isEmpty ? nil : text
+        return text.isEmpty || isSilencePhrase(text) ? nil : text
+    }
+
+    /// Whisper was trained partly on video subtitles, so near-silence often
+    /// comes back as one of these. Only a transcript that is nothing but one
+    /// of them is dropped; the same words inside real speech are kept.
+    static let silencePhrases: Set<String> = [
+        "thanks for watching",
+        "thanks for watching bye",
+        "thank you for watching",
+        "thank you so much for watching",
+        "thanks for listening",
+        "thank you for listening",
+        "please subscribe",
+        "please like and subscribe",
+        "like and subscribe",
+        "subscribe to my channel",
+        "dont forget to like and subscribe",
+        "see you in the next video",
+        "see you next time",
+        "bye",
+        "bye bye", "byebye",
+        "you",
+        "subtitles by the amaraorg community",
+        "transcription by castingwords",
+    ]
+
+    public static func isSilencePhrase(_ text: String) -> Bool {
+        let letters = text.lowercased().unicodeScalars
+            .filter { CharacterSet.alphanumerics.contains($0) || $0 == " " }
+        let normalized = String(String.UnicodeScalarView(letters))
+            .split(separator: " ").joined(separator: " ")
+        return silencePhrases.contains(normalized)
     }
 
     /// Whisper rejects very short input; pad with silence to at least one second.

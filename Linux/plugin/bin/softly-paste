@@ -82,6 +82,16 @@ paste() {
     exit 0
   fi
 
+  # Whisper was trained partly on video subtitles, so near-silence often comes
+  # back as "Thanks for watching!" and the like. A transcript that is nothing
+  # but one of these counts as nothing said: no paste, clipboard restored.
+  local normalized
+  normalized=$(tr '[:upper:]' '[:lower:]' <"$state/dictated" | tr -cd '[:alnum:] ' | tr -s ' ' | sed 's/^ //; s/ $//')
+  if [[ $normalized =~ ^(thanks for watching|thanks for watching bye|thank you for watching|thank you so much for watching|thanks for listening|thank you for listening|please subscribe|please like and subscribe|like and subscribe|subscribe to my channel|dont forget to like and subscribe|see you in the next video|see you next time|bye|bye bye|byebye|you|subtitles by the amaraorg community|transcription by castingwords)$ ]]; then
+    recover_previous
+    exit 0
+  fi
+
   local window
   window=$(hyprctl activewindow -j 2>/dev/null)
   if jq -e --argjson apps "$ctrl_shift_v_apps" '.class as $c | $apps | index($c)' <<<"$window" >/dev/null; then

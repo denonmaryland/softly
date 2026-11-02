@@ -182,6 +182,10 @@ public class WaveformAndTranscriptTests
         Assert.Null(Transcript.Clean(new[] { " [BLANK_AUDIO]", "(silence) " }));
         Assert.Equal("Hello there. How are you?", Transcript.Clean(new[] { " Hello there.", " How are you? " }));
         Assert.Equal("Okay then", Transcript.Clean(new[] { "[Music] Okay  then" }));
+        Assert.Null(Transcript.Clean(new[] { " Thanks for watching!" }));
+        Assert.Null(Transcript.Clean(new[] { " Thank you for watching.", " " }));
+        Assert.Null(Transcript.Clean(new[] { " you" }));
+        Assert.Equal("Thanks for watching the kids tonight.", Transcript.Clean(new[] { " Thanks for watching the kids tonight." }));
     }
 
     [Fact]

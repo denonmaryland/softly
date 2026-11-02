@@ -140,6 +140,10 @@ final class WaveformAndTranscriptTests: XCTestCase {
         XCTAssertNil(Transcript.clean([" [BLANK_AUDIO]", "(silence) "]))
         XCTAssertEqual(Transcript.clean([" Hello there.", " How are you? "]), "Hello there. How are you?")
         XCTAssertEqual(Transcript.clean(["[Music] Okay  then"]), "Okay then")
+        XCTAssertNil(Transcript.clean([" Thanks for watching!"]))
+        XCTAssertNil(Transcript.clean([" Thank you for watching.", " "]))
+        XCTAssertNil(Transcript.clean([" you"]))
+        XCTAssertEqual(Transcript.clean([" Thanks for watching the kids tonight."]), "Thanks for watching the kids tonight.")
     }
 
     func testPadding() {
