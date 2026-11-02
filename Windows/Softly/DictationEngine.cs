@@ -17,6 +17,8 @@ public sealed class DictationEngine
     public Transcriber.Status ModelStatus { get; private set; } = Transcriber.Status.Loading;
     public string Backend => transcriber.Backend;
     public Action OnStatusChange = () => { };
+    /// <summary>Called with each pasted transcript, for the window's Recent list.</summary>
+    public Action<string> OnDictated = _ => { };
     /// <summary>
     /// The last few dictations, newest first. Held in memory only, like the
     /// Linux popover's list, so nothing said is ever written to disk.
@@ -308,7 +310,10 @@ public sealed class DictationEngine
             return;
         }
         if (text.Length > 0)
+        {
             recent = new[] { text }.Concat(recent.Where(r => r != text).Take(4)).ToList();
+            OnDictated(text);
+        }
         Paster.Paste(text, dispatcher, submit);
         // Let the paste land, confirm with a check, then close.
         int token = session;

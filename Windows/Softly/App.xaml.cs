@@ -68,6 +68,7 @@ public partial class App : Application
         state.CancelCapture = () => { hotkeys.OnCapture = null; state.CapturingHotkey = false; };
         engine.PressTicks = () => hotkeys.PressTicks;
         engine.OnStatusChange = Refresh;
+        engine.OnDictated = text => state.AddRecent(text);
         state.ShowModelFolder = ShowModelFolder;
         state.ReloadModel = () => engine.LoadModel();
         downloader = new ModelDownloader(Dispatcher);
@@ -109,6 +110,7 @@ public partial class App : Application
             "model-state" => Task.FromResult($"model={state.SpeechModel} status={engine.ModelStatus} downloading={state.DownloadingModel} {downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
             var t when t.StartsWith("transcribe-ahead ") => engine.TranscribeAheadFileAsync(t.Substring(17)),
             var t when t.StartsWith("choose-language ") => Run(() => ChooseLanguage(t.Substring(16))),
+            var t when t.StartsWith("show ") => Run(() => { OpenWindow(); mainWindow!.ShowSection(t.Substring(5).Trim()); }),
             var t when t.StartsWith("choose-model ") => Run(() => ChooseModel(t.Substring(13))),
             "download-state" => Task.FromResult($"{downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
             "install-update" => Run(() => updater.Install()),
@@ -213,6 +215,10 @@ public partial class App : Application
         mainWindow ??= new MainWindow(state);
         mainWindow.Show();
         if (mainWindow.WindowState == WindowState.Minimized) mainWindow.WindowState = WindowState.Normal;
+        // Windows keeps background apps from taking focus; a brief topmost
+        // flip still brings the window in front of whatever is there.
+        mainWindow.Topmost = true;
+        mainWindow.Topmost = false;
         mainWindow.Activate();
     }
 

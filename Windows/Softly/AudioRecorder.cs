@@ -54,7 +54,9 @@ public sealed class AudioRecorder
     public void Start()
     {
         if (running) return;
-        var cap = new WasapiCapture();
+        // A microphone picked in the window; otherwise the Windows default.
+        var device = Microphones.Find(Settings.Microphone);
+        var cap = device != null ? new WasapiCapture(device) : new WasapiCapture();
         var format = cap.WaveFormat;
         var buffer = new BufferedWaveProvider(format)
         {

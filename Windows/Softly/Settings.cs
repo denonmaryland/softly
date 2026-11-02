@@ -41,6 +41,7 @@ public static class Settings
         public string SpeechModel { get; set; } = "balanced";
         public bool SubmitWord { get; set; }
         public string Language { get; set; } = "en";
+        public string Microphone { get; set; } = "";
         public List<Replacement> Replacements { get; set; } = new();
     }
 
@@ -114,6 +115,13 @@ public static class Settings
     {
         get => new(Load().Vocabulary);
         set { Load().Vocabulary = new List<string>(value); Save(); }
+    }
+
+    /// <summary>Endpoint ID of the chosen microphone; empty follows the Windows default.</summary>
+    public static string Microphone
+    {
+        get => Load().Microphone ?? "";
+        set { Load().Microphone = value; Save(); }
     }
 
     /// <summary>Whisper language code from Languages.All; "auto" detects it.</summary>

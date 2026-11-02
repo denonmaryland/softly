@@ -3,39 +3,46 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Softly" Width="1040" Height="720" MinWidth="860" MinHeight="600"
         WindowStartupLocation="CenterScreen" Background="White"
-        FontFamily="Segoe UI" TextOptions.TextFormattingMode="Ideal" UseLayoutRounding="True">
+        FontFamily="Segoe UI Variable Text, Segoe UI" TextOptions.TextFormattingMode="Ideal" UseLayoutRounding="True">
+  <!-- Direction "A · Gallery" (Paper, page 0.3 · Redesign): Swiss type, one
+       cobalt accent, hairline rules, and two-column sections with the label on
+       the left and the controls on the right. Same screens as the Mac app. -->
   <Window.Resources>
-    <SolidColorBrush x:Key="Ink" Color="#20252B"/>
-    <SolidColorBrush x:Key="Ink2" Color="#46525E"/>
-    <SolidColorBrush x:Key="Muted" Color="#65707C"/>
-    <SolidColorBrush x:Key="Placeholder" Color="#7B8490"/>
-    <SolidColorBrush x:Key="Sidebar" Color="#F0F2F4"/>
-    <SolidColorBrush x:Key="Hairline" Color="#E5E8EB"/>
-    <SolidColorBrush x:Key="Border" Color="#DFE3E7"/>
-    <SolidColorBrush x:Key="Accent" Color="#0064D5"/>
-    <SolidColorBrush x:Key="AccentFill" Color="#DCEAFF"/>
-    <SolidColorBrush x:Key="Green" Color="#27834A"/>
-    <SolidColorBrush x:Key="CardFill" Color="#F6F8FA"/>
-    <SolidColorBrush x:Key="CardBorder" Color="#E2E7EC"/>
+    <SolidColorBrush x:Key="Ink" Color="#0B0B0C"/>
+    <SolidColorBrush x:Key="Ink2" Color="#3A3D42"/>
+    <SolidColorBrush x:Key="Muted" Color="#6B6F76"/>
+    <SolidColorBrush x:Key="Faint" Color="#9A9EA5"/>
+    <SolidColorBrush x:Key="Hairline" Color="#E6E7EA"/>
+    <SolidColorBrush x:Key="FieldBorder" Color="#D5D7DB"/>
+    <SolidColorBrush x:Key="Well" Color="#F4F5F7"/>
+    <SolidColorBrush x:Key="Accent" Color="#1F4FFF"/>
+    <SolidColorBrush x:Key="AccentWash" Color="#EEF2FF"/>
+    <SolidColorBrush x:Key="Green" Color="#1F9D55"/>
 
     <Style x:Key="NavItem" TargetType="RadioButton">
-      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
       <Setter Property="FontSize" Value="15"/>
-      <Setter Property="Padding" Value="14,11"/>
-      <Setter Property="Margin" Value="0,0,0,7"/>
-      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Padding" Value="0,6"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RadioButton">
-            <Border x:Name="Bg" CornerRadius="7" Background="Transparent" Padding="{TemplateBinding Padding}">
-              <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+              <StackPanel Orientation="Horizontal">
+                <Grid Width="14">
+                  <Ellipse x:Name="Dot" Width="6" Height="6" Fill="{StaticResource Accent}" HorizontalAlignment="Left" Visibility="Hidden"/>
+                </Grid>
+                <ContentPresenter VerticalAlignment="Center"/>
+              </StackPanel>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="Bg" Property="Background" Value="{StaticResource AccentFill}"/>
-                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                <Setter TargetName="Dot" Property="Visibility" Value="Visible"/>
+                <Setter Property="Foreground" Value="{StaticResource Ink}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource Ink}"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -43,58 +50,82 @@
       </Setter>
     </Style>
 
-    <Style x:Key="Keycap" TargetType="Border">
-      <Setter Property="Background" Value="#F4F5F6"/>
-      <Setter Property="BorderBrush" Value="#D5D9DE"/>
-      <Setter Property="BorderThickness" Value="1,1,1,3"/>
-      <Setter Property="CornerRadius" Value="7"/>
-      <Setter Property="Padding" Value="14,8"/>
-      <Setter Property="VerticalAlignment" Value="Center"/>
+    <Style x:Key="Title" TargetType="TextBlock">
+      <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI"/>
+      <Setter Property="FontSize" Value="44"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
     </Style>
-    <Style x:Key="KeycapText" TargetType="TextBlock">
+    <Style x:Key="Subtitle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+      <Setter Property="Margin" Value="0,10,0,36"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style x:Key="Label" TargetType="TextBlock">
+      <Setter Property="MaxWidth" Value="170"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/>
       <Setter Property="FontSize" Value="15"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="#39424C"/>
+      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+    </Style>
+    <Style x:Key="LabelDetail" TargetType="TextBlock">
+      <Setter Property="MaxWidth" Value="170"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="LineHeight" Value="19"/>
+      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+      <Setter Property="Margin" Value="0,6,0,0"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style x:Key="RowTitle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="15"/>
-      <Setter Property="FontWeight" Value="Medium"/>
       <Setter Property="Foreground" Value="{StaticResource Ink}"/>
     </Style>
     <Style x:Key="RowSub" TargetType="TextBlock">
       <Setter Property="FontSize" Value="13"/>
       <Setter Property="Foreground" Value="{StaticResource Muted}"/>
-      <Setter Property="Margin" Value="0,4,0,0"/>
+      <Setter Property="Margin" Value="0,3,0,0"/>
       <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
-    <Style x:Key="Caption" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="11"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+    <!-- A section: rule on top, then label column (170) + 40 gap + controls. -->
+    <Style x:Key="Section" TargetType="Border">
+      <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
+      <Setter Property="BorderThickness" Value="0,1,0,0"/>
+      <Setter Property="Padding" Value="0,24,0,32"/>
     </Style>
-    <Style x:Key="Headline" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="30"/>
-      <Setter Property="FontWeight" Value="Bold"/>
-      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
-      <Setter Property="TextWrapping" Value="Wrap"/>
+    <Style x:Key="FirstSection" TargetType="Border" BasedOn="{StaticResource Section}">
+      <Setter Property="BorderBrush" Value="{StaticResource Ink}"/>
     </Style>
-    <Style x:Key="Subhead" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="15"/>
-      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
-      <Setter Property="Margin" Value="0,10,0,0"/>
-      <Setter Property="TextWrapping" Value="Wrap"/>
+    <Style x:Key="Row" TargetType="Border">
+      <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="Padding" Value="0,14"/>
+    </Style>
+    <Style x:Key="LastRow" TargetType="Border" BasedOn="{StaticResource Row}">
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+
+    <Style x:Key="Keycap" TargetType="Border">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="BorderBrush" Value="#CDD0D5"/>
+      <Setter Property="BorderThickness" Value="1,1,1,3"/>
+      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="Padding" Value="10,5"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style x:Key="Switch" TargetType="CheckBox">
       <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="CheckBox">
-            <Border x:Name="Track" Width="34" Height="21" CornerRadius="10.5" Background="#C8CDD3">
-              <Ellipse x:Name="Knob" Width="17" Height="17" Fill="White" HorizontalAlignment="Left" Margin="2,0,0,0"/>
+            <Border x:Name="Track" Width="40" Height="24" CornerRadius="12" Background="#D9DBDF">
+              <Ellipse x:Name="Knob" Width="20" Height="20" Fill="White" HorizontalAlignment="Left" Margin="2,0,0,0"/>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="Track" Property="Background" Value="#007AFF"/>
+                <Setter TargetName="Track" Property="Background" Value="{StaticResource Accent}"/>
                 <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
                 <Setter TargetName="Knob" Property="Margin" Value="0,0,2,0"/>
               </Trigger>
@@ -108,30 +139,73 @@
       <Setter Property="FontSize" Value="14"/>
       <Setter Property="FontWeight" Value="Medium"/>
       <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <ContentPresenter/>
+            <Border Background="Transparent"><ContentPresenter/></Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{StaticResource Faint}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
     </Style>
-    <Style x:Key="PlainButton" TargetType="Button">
-      <Setter Property="Background" Value="#F8F9FA"/>
-      <Setter Property="BorderBrush" Value="#DCE1E6"/>
-      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
-      <Setter Property="FontSize" Value="13"/>
-      <Setter Property="Padding" Value="12,6"/>
+    <!-- Pill: filled ink when Tag is "on", outlined otherwise. -->
+    <Style x:Key="ChoicePill" TargetType="Button">
+      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+      <Setter Property="FontSize" Value="14"/>
       <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Margin" Value="0,0,8,0"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+            <Border x:Name="Bg" CornerRadius="18" BorderThickness="1" BorderBrush="{StaticResource Hairline}" Background="Transparent" Padding="14,7">
               <ContentPresenter/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="Tag" Value="on">
+                <Setter TargetName="Bg" Property="Background" Value="{StaticResource Ink}"/>
+                <Setter TargetName="Bg" Property="BorderBrush" Value="{StaticResource Ink}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontWeight" Value="Medium"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="Field" TargetType="TextBox">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="Padding" Value="9,0"/>
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="BorderBrush" Value="{StaticResource FieldBorder}"/>
+      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border CornerRadius="8" BorderThickness="1" BorderBrush="{TemplateBinding BorderBrush}" Background="White">
+              <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
             </Border>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
+    </Style>
+    <Style x:Key="Placeholder" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="Foreground" Value="{StaticResource Faint}"/>
+      <Setter Property="Margin" Value="12,0,0,0"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style x:Key="Remove" TargetType="Button" BasedOn="{StaticResource LinkButton}">
+      <Setter Property="Foreground" Value="{StaticResource Faint}"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Content" Value="✕"/>
+      <Setter Property="ToolTip" Value="Remove"/>
     </Style>
   </Window.Resources>
 
@@ -142,7 +216,7 @@
     </Grid.ColumnDefinitions>
 
     <!-- Sidebar -->
-    <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource Border}" BorderThickness="0,0,1,0" Padding="18,26">
+    <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,1,0" Padding="14,40,20,28">
       <Grid>
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
@@ -150,220 +224,333 @@
           <RowDefinition Height="*"/>
           <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <StackPanel Orientation="Horizontal" Margin="10,12,10,12">
-          <Path Width="24" Height="24" Stroke="{StaticResource Accent}" StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                Data="M12,2 A3,3 0 0 1 15,5 L15,11 A3,3 0 0 1 9,11 L9,5 A3,3 0 0 1 12,2 Z M6,11 A6,6 0 0 0 18,11 M12,17 L12,21 M9,21 L15,21" Stretch="Uniform"/>
-          <TextBlock Text="Softly" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Ink}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+        <StackPanel Orientation="Horizontal" Margin="14,0,0,0">
+          <Ellipse Width="22" Height="22" Fill="{StaticResource Accent}"/>
+          <TextBlock Text="Softly" FontSize="18" FontWeight="Bold" Foreground="{StaticResource Ink}" Margin="10,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
-        <StackPanel Grid.Row="1" Margin="0,28,0,0">
+        <StackPanel Grid.Row="1" Margin="0,36,0,0">
           <RadioButton x:Name="NavHome" Style="{StaticResource NavItem}" Content="Home" IsChecked="True" Checked="NavChanged"/>
-          <RadioButton x:Name="NavVocabulary" Style="{StaticResource NavItem}" Content="Vocabulary" Checked="NavChanged"/>
-          <RadioButton x:Name="NavPreferences" Style="{StaticResource NavItem}" Content="Preferences" Checked="NavChanged"/>
+          <RadioButton x:Name="NavSpeech" Style="{StaticResource NavItem}" Content="Speech" Checked="NavChanged"/>
+          <RadioButton x:Name="NavWords" Style="{StaticResource NavItem}" Content="Words" Checked="NavChanged"/>
+          <RadioButton x:Name="NavShortcut" Style="{StaticResource NavItem}" Content="Shortcut" Checked="NavChanged"/>
+          <RadioButton x:Name="NavLook" Style="{StaticResource NavItem}" Content="Look" Checked="NavChanged"/>
+          <RadioButton x:Name="NavAbout" Style="{StaticResource NavItem}" Content="About" Checked="NavChanged"/>
         </StackPanel>
-        <StackPanel Grid.Row="3" Margin="10,0,0,2">
-          <TextBlock Text="ON THIS PC" Style="{StaticResource Caption}"/>
-          <TextBlock Text="Softly · English" FontSize="13" Foreground="{StaticResource Ink2}" Margin="0,7,0,0"/>
-          <TextBlock Text="Audio held in memory only" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,7,0,0"/>
+        <StackPanel Grid.Row="3" Margin="14,0,0,0">
+          <StackPanel Orientation="Horizontal">
+            <Ellipse x:Name="SideDot" Width="8" Height="8" Fill="{StaticResource Green}"/>
+            <TextBlock x:Name="SideStatus" Text="Ready" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Ink}" Margin="8,0,0,0"/>
+          </StackPanel>
+          <TextBlock x:Name="SideHint" Text="Tap Right Alt to dictate" FontSize="13" Foreground="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"/>
         </StackPanel>
       </Grid>
     </Border>
 
-    <!-- Content -->
-    <Grid Grid.Column="1">
-      <Grid.RowDefinitions>
-        <RowDefinition Height="66"/>
-        <RowDefinition Height="*"/>
-      </Grid.RowDefinitions>
-      <Border BorderBrush="#EDF0F2" BorderThickness="0,0,0,1" Padding="34,0">
-        <TextBlock x:Name="HeaderTitle" Text="Home" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource Ink}" VerticalAlignment="Center"/>
-      </Border>
-      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-        <Grid Margin="48,40,48,48" HorizontalAlignment="Left" MaxWidth="724">
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+      <!-- Content keeps to 760 px and stays left-aligned in wide windows. -->
+      <Grid Margin="56,40,56,48">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="760"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
 
-          <!-- Home -->
-          <StackPanel x:Name="HomePanel">
-            <StackPanel Orientation="Horizontal">
-              <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource Green}" VerticalAlignment="Center"/>
-              <TextBlock x:Name="StatusText" Text="Ready to dictate" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Green}" Margin="7,0,0,0" VerticalAlignment="Center"/>
-              <Button x:Name="HomeModelAction" Style="{StaticResource LinkButton}" Content="" Click="ModelActionClick" Margin="14,0,0,0" VerticalAlignment="Center" Visibility="Collapsed"/>
-            </StackPanel>
-            <TextBlock Text="Your words. Right where you need them." FontSize="32" FontWeight="Bold" Foreground="{StaticResource Ink}" Margin="0,14,0,0" TextWrapping="Wrap"/>
-            <TextBlock Text="Speak into the app you’re using. Softly takes it from here." FontSize="15" Foreground="{StaticResource Muted}" Margin="0,14,0,0"/>
-            <Border Background="{StaticResource CardFill}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" CornerRadius="12" Padding="24" Margin="0,50,0,0">
-              <StackPanel Orientation="Horizontal">
-                <Border Style="{StaticResource Keycap}"><TextBlock x:Name="HomeKey" Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
-                <StackPanel Margin="26,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Text="Hold to speak. Release to paste." FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/>
-                  <TextBlock x:Name="HomeGestureText" Text="Tap to start, tap again to finish. Or hold to talk." FontSize="14" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
+        <!-- Home -->
+        <StackPanel x:Name="HomePanel">
+          <TextBlock x:Name="HomeTitle" Text="Ready" Style="{StaticResource Title}"/>
+          <TextBlock x:Name="HomeSub" Style="{StaticResource Subtitle}"/>
+          <Border x:Name="HomeSetup" Style="{StaticResource FirstSection}" Visibility="Collapsed">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="To finish" Style="{StaticResource Label}"/><TextBlock Text="Softly needs these once." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <DockPanel Grid.Column="1">
+                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                  <Button x:Name="HomeModelAction" Style="{StaticResource LinkButton}" Click="ModelActionClick" HorizontalAlignment="Right"/>
+                  <TextBlock x:Name="ModelNote" FontSize="11" Foreground="{StaticResource Muted}" TextAlignment="Right" MaxWidth="240" TextWrapping="Wrap" Visibility="Collapsed"/>
+                </StackPanel>
+                <StackPanel><TextBlock x:Name="SetupTitle" Text="Speech model" Style="{StaticResource RowTitle}"/><TextBlock x:Name="SetupSub" Text="Downloads once, then runs on this PC" Style="{StaticResource RowSub}"/></StackPanel>
+              </DockPanel>
+            </Grid>
+          </Border>
+          <Border x:Name="TrySection" Style="{StaticResource FirstSection}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock Text="Try it here" Style="{StaticResource Label}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                  <Border Style="{StaticResource Keycap}"><TextBlock x:Name="HomeKey" Text="Right Alt" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/></Border>
+                  <TextBlock x:Name="HomeGesture" Text="tap or hold" FontSize="13" Foreground="{StaticResource Muted}" Margin="8,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
               </StackPanel>
-            </Border>
-            <TextBlock Text="Try it here" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource Ink}" Margin="0,45,0,0"/>
-            <Border BorderBrush="#C9D0D8" BorderThickness="1" CornerRadius="9" Padding="20" Margin="0,16,0,0" Height="154">
-              <Grid>
-                <Grid.RowDefinitions>
-                  <RowDefinition Height="*"/>
-                  <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+              <Border Grid.Column="1" Background="{StaticResource Well}" CornerRadius="10" Padding="16,12" Height="112">
                 <Grid>
-                  <TextBox x:Name="Practice" FontSize="16" BorderThickness="0" Background="Transparent" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Foreground="{StaticResource Ink}" TextChanged="PracticeChanged"/>
-                  <TextBlock x:Name="PracticeHint" Text="Click here, then hold Right Alt and say something." FontSize="16" Foreground="{StaticResource Placeholder}" Margin="3,1,0,0" IsHitTestVisible="False"/>
+                  <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <TextBox x:Name="Practice" FontSize="15" Background="Transparent" BorderThickness="0" TextWrapping="Wrap" AcceptsReturn="True" Foreground="{StaticResource Ink}" TextChanged="PracticeChanged"/>
+                  <TextBlock x:Name="PracticeHint" Text="Click here, tap Right Alt and say something…" FontSize="15" Foreground="{StaticResource Faint}" IsHitTestVisible="False" Margin="3,1,0,0"/>
+                  <DockPanel Grid.Row="1">
+                    <Button x:Name="ClearButton" DockPanel.Dock="Right" Content="Clear" Style="{StaticResource LinkButton}" FontSize="12" Click="ClearPractice" Visibility="Collapsed"/>
+                    <TextBlock x:Name="PracticeNote" Text="Only a test box. Nothing is kept." FontSize="12" Foreground="{StaticResource Faint}" HorizontalAlignment="Right"/>
+                  </DockPanel>
                 </Grid>
-                <DockPanel Grid.Row="1" Margin="0,10,0,0">
-                  <Button x:Name="ClearButton" DockPanel.Dock="Right" Content="Clear" Style="{StaticResource PlainButton}" Click="ClearPractice" IsEnabled="False"/>
-                  <TextBlock Text="A temporary place to get comfortable." FontSize="13" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
-                </DockPanel>
-              </Grid>
-            </Border>
-            <TextBlock Text="Runs on this PC. No audio saved. No transcript history." FontSize="13" FontWeight="Medium" Foreground="{StaticResource Ink2}" Margin="0,29,0,0"/>
-            <TextBlock Text="Esc cancels · Your transcript stays on the clipboard after pasting." FontSize="13" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
-          </StackPanel>
-
-          <!-- Vocabulary -->
-          <StackPanel x:Name="VocabularyPanel" Visibility="Collapsed">
-            <TextBlock Text="Words it should know." Style="{StaticResource Headline}"/>
-            <TextBlock Text="Names and terms Softly gets wrong. They are hinted to the model on every dictation and stay on this PC." Style="{StaticResource Subhead}"/>
-            <DockPanel Margin="0,26,0,0">
-              <Button x:Name="AddButton" DockPanel.Dock="Right" Content="Add" Style="{StaticResource PlainButton}" Margin="10,0,0,0" Click="AddWord" IsEnabled="False"/>
-              <TextBox x:Name="Draft" FontSize="15" Padding="8,6" BorderBrush="#C9D0D8" TextChanged="DraftChanged" KeyDown="DraftKeyDown"/>
-            </DockPanel>
-            <ItemsControl x:Name="WordList" Margin="0,16,0,0">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Border BorderBrush="#E5E8EB" BorderThickness="0,0,0,1" Padding="0,12">
-                    <DockPanel>
-                      <Button DockPanel.Dock="Right" Content="✕" FontSize="11" Width="24" Height="24" Style="{StaticResource LinkButton}" Foreground="#65707C" Tag="{Binding}" Click="RemoveWord" ToolTip="Remove"/>
-                      <TextBlock Text="{Binding}" FontSize="15" Foreground="#20252B" VerticalAlignment="Center"/>
-                    </DockPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock x:Name="PromptText" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,20,0,0" TextWrapping="Wrap"/>
-
-            <!-- "When Softly hears this, type that." -->
-            <TextBlock Text="Fix what it hears." FontSize="22" FontWeight="Bold" Foreground="{StaticResource Ink}" Margin="0,40,0,0"/>
-            <TextBlock Text="When Softly hears the phrase on the left, it types the one on the right. Leave the right side empty to drop a word, like “um”." FontSize="14" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0"/>
-            <Grid Margin="0,20,0,0">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-              </Grid.ColumnDefinitions>
-              <Grid>
-                <TextBox x:Name="HeardBox" FontSize="15" Padding="8,6" BorderBrush="#C9D0D8" TextChanged="RuleDraftChanged" KeyDown="RuleKeyDown"/>
-                <TextBlock x:Name="HeardHint" Text="Heard, e.g. cloud code" FontSize="15" Foreground="{StaticResource Muted}" Margin="11,7,0,0" IsHitTestVisible="False"/>
-              </Grid>
-              <TextBlock Grid.Column="1" Text="→" FontSize="14" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="10,0"/>
-              <Grid Grid.Column="2">
-                <TextBox x:Name="TypedBox" FontSize="15" Padding="8,6" BorderBrush="#C9D0D8" TextChanged="RuleDraftChanged" KeyDown="RuleKeyDown"/>
-                <TextBlock x:Name="TypedHint" Text="Type, e.g. Claude Code" FontSize="15" Foreground="{StaticResource Muted}" Margin="11,7,0,0" IsHitTestVisible="False"/>
-              </Grid>
-              <Button x:Name="AddRuleButton" Grid.Column="3" Content="Add" Style="{StaticResource PlainButton}" Margin="10,0,0,0" Click="AddRule" IsEnabled="False"/>
+              </Border>
             </Grid>
-            <ItemsControl x:Name="RuleList" Margin="0,16,0,0">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Border BorderBrush="#E5E8EB" BorderThickness="0,0,0,1" Padding="0,12">
-                    <DockPanel>
-                      <Button DockPanel.Dock="Right" Content="✕" FontSize="11" Width="24" Height="24" Style="{StaticResource LinkButton}" Foreground="#65707C" Tag="{Binding}" Click="RemoveRule" ToolTip="Remove"/>
-                      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding From}" FontSize="15" Foreground="#65707C"/>
-                        <TextBlock Text="  →  " FontSize="13" Foreground="#9AA3AD" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Shown}" FontSize="15" FontWeight="Medium" Foreground="#20252B"/>
-                      </StackPanel>
-                    </DockPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock x:Name="RulesEmpty" Text="No fixes yet." FontSize="13" Foreground="{StaticResource Muted}" Margin="0,16,0,0"/>
-          </StackPanel>
+          </Border>
+          <Border Style="{StaticResource Section}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="Recent" Style="{StaticResource Label}"/><TextBlock Text="The last five, kept in memory only. Gone when Softly quits." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <StackPanel Grid.Column="1">
+                <TextBlock x:Name="RecentEmpty" Text="Nothing yet. What you dictate shows up here so you can copy it again." FontSize="14" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                <ItemsControl x:Name="RecentList" Margin="0,-10,0,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,10">
+                        <DockPanel>
+                          <Button DockPanel.Dock="Right" Content="Copy" Width="48" HorizontalContentAlignment="Right" Style="{StaticResource LinkButton}" FontSize="13" Tag="{Binding Text}" Click="CopyRecent"/>
+                          <TextBlock DockPanel.Dock="Right" Text="{Binding Ago}" Width="72" TextAlignment="Right" FontSize="13" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Text}" FontSize="14" Foreground="{StaticResource Ink}" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" Margin="0,0,16,0"/>
+                        </DockPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Grid>
+          </Border>
+        </StackPanel>
 
-          <!-- Preferences -->
-          <StackPanel x:Name="PreferencesPanel" Visibility="Collapsed">
-            <TextBlock Text="Make yourself at home." Style="{StaticResource Headline}"/>
-            <TextBlock Text="A few quiet controls. Everything stays on this PC." Style="{StaticResource Subhead}"/>
-            <StackPanel Margin="0,26,0,0">
-              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
-                <DockPanel>
-                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border x:Name="ShortcutCap" Style="{StaticResource Keycap}"><TextBlock x:Name="ShortcutKey" Text="Right Alt" Style="{StaticResource KeycapText}"/></Border>
-                    <TextBlock x:Name="ShortcutWaiting" Text="Press a key…" FontSize="14" FontWeight="Medium" Foreground="{StaticResource Accent}" VerticalAlignment="Center" Visibility="Collapsed"/>
-                    <Button x:Name="ShortcutChange" Style="{StaticResource LinkButton}" Content="Change" Click="ChangeShortcut" Margin="14,0,0,0" VerticalAlignment="Center"/>
-                  </StackPanel>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Dictation shortcut" Style="{StaticResource RowTitle}"/><TextBlock x:Name="ShortcutSub" Text="Tap to start and stop · or hold to talk" Style="{StaticResource RowSub}"/></StackPanel>
-                </DockPanel>
-              </Border>
-              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
-                <DockPanel>
-                  <CheckBox x:Name="TapSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Click="TapChanged"/>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Tap to start and stop" Style="{StaticResource RowTitle}"/><TextBlock Text="Off: hold the key while you talk, let go to finish" Style="{StaticResource RowSub}"/></StackPanel>
-                </DockPanel>
-              </Border>
-              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
-                <DockPanel>
-                  <CheckBox x:Name="SubmitSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Click="SubmitChanged"/>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Say “submit” to send" Style="{StaticResource RowTitle}"/><TextBlock Text="End with “submit” and Softly presses Enter after pasting" Style="{StaticResource RowSub}"/></StackPanel>
-                </DockPanel>
-              </Border>
-              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
-                <DockPanel>
-                  <CheckBox x:Name="SoundsSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Click="SoundsChanged"/>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Play sounds" Style="{StaticResource RowTitle}"/><TextBlock Text="A subtle cue when recording starts and ends" Style="{StaticResource RowSub}"/></StackPanel>
-                </DockPanel>
-              </Border>
-              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
-                <DockPanel>
-                  <CheckBox x:Name="MediaSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Click="MediaChanged"/>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Pause music while recording" Style="{StaticResource RowTitle}"/><TextBlock Text="Whatever is playing pauses, then picks up where it left off" Style="{StaticResource RowSub}"/></StackPanel>
-                </DockPanel>
-              </Border>
-              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
-                <DockPanel>
-                  <TextBlock DockPanel.Dock="Right" Text="System default" FontSize="14" FontWeight="Medium" Foreground="{StaticResource Ink2}" VerticalAlignment="Center"/>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Microphone" Style="{StaticResource RowTitle}"/><TextBlock Text="Use the microphone selected in Windows" Style="{StaticResource RowSub}"/></StackPanel>
-                </DockPanel>
-              </Border>
-              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
-                <DockPanel>
-                  <ComboBox x:Name="LanguageBox" DockPanel.Dock="Right" Width="180" FontSize="14" VerticalAlignment="Center" SelectionChanged="LanguageChanged"/>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Language" Style="{StaticResource RowTitle}"/><TextBlock Text="What you speak. Other than English uses a multilingual model." Style="{StaticResource RowSub}"/></StackPanel>
-                </DockPanel>
-              </Border>
-              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
-                <DockPanel>
-                  <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
-                    <TextBlock x:Name="ModelText" FontSize="14" FontWeight="Medium" Foreground="{StaticResource Green}"/>
-                    <Button x:Name="ModelAction" Style="{StaticResource LinkButton}" Content="" Click="ModelActionClick" Visibility="Collapsed" HorizontalAlignment="Right"/>
-                    <TextBlock x:Name="ModelNote" FontSize="11" Foreground="{StaticResource Ink2}" TextWrapping="Wrap" MaxWidth="260" TextAlignment="Right" Visibility="Collapsed"/>
-                  </StackPanel>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Speech model" Style="{StaticResource RowTitle}"/><TextBlock x:Name="ModelSub" Text="Balanced · English · runs on this PC" Style="{StaticResource RowSub}"/></StackPanel>
-                </DockPanel>
-              </Border>
-              <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="0,18">
-                <DockPanel>
-                  <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <Button x:Name="UpdateAction" Style="{StaticResource LinkButton}" Content="Check for updates" HorizontalAlignment="Right" Click="UpdateActionClick"/>
-                    <TextBlock x:Name="UpdateNote" FontSize="11" Foreground="{StaticResource Muted}" TextAlignment="Right" MaxWidth="220" TextWrapping="Wrap" Visibility="Collapsed"/>
-                  </StackPanel>
-                  <StackPanel Margin="0,0,20,0"><TextBlock Text="Updates" Style="{StaticResource RowTitle}"/><TextBlock x:Name="VersionText" Style="{StaticResource RowSub}"/></StackPanel>
-                </DockPanel>
-              </Border>
+        <!-- Speech -->
+        <StackPanel x:Name="SpeechPanel" Visibility="Collapsed">
+          <TextBlock Text="Speech" Style="{StaticResource Title}"/>
+          <TextBlock Text="How Softly hears you. Everything runs on this PC; nothing is sent anywhere." Style="{StaticResource Subtitle}"/>
+          <Border Style="{StaticResource FirstSection}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="Model" Style="{StaticResource Label}"/><TextBlock Text="Bigger hears names and code better. Others download once." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <StackPanel x:Name="ModelList" Grid.Column="1" Margin="0,-12,0,0"/>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource Section}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="Language" Style="{StaticResource Label}"/><TextBlock x:Name="LanguageDetail" Text="What you speak." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button x:Name="LangEnglish" Content="English" Style="{StaticResource ChoicePill}" Click="LanguagePill"/>
+                <Button x:Name="LangDetect" Content="Detect" Style="{StaticResource ChoicePill}" Click="LanguagePill"/>
+                <ComboBox x:Name="LanguageBox" Width="170" FontSize="14" VerticalAlignment="Center" SelectionChanged="LanguageChanged"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource Section}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="Say “submit”" Style="{StaticResource Label}"/><TextBlock Text="For agents and chats." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <DockPanel Grid.Column="1">
+                <CheckBox x:Name="SubmitSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Click="SubmitChanged"/>
+                <TextBlock FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource Ink2}" Margin="0,0,24,0" LineHeight="21">End with “submit” and Softly presses Enter after pasting. <Run Foreground="#6B6F76">“…and rerun the tests, submit.”</Run></TextBlock>
+              </DockPanel>
+            </Grid>
+          </Border>
+        </StackPanel>
+
+        <!-- Words -->
+        <StackPanel x:Name="WordsPanel" Visibility="Collapsed">
+          <TextBlock Text="Words" Style="{StaticResource Title}"/>
+          <TextBlock Text="Names Softly should know, and fixes for what it keeps mishearing." Style="{StaticResource Subtitle}"/>
+          <Border Style="{StaticResource FirstSection}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="Vocabulary" Style="{StaticResource Label}"/><TextBlock Text="Hinted to the model on every dictation. Whisper models only." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                <ItemsControl x:Name="WordList">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border CornerRadius="16" Background="{StaticResource Well}" Padding="12,6,9,6" Margin="0,0,8,8">
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="{Binding}" FontSize="14" Foreground="{StaticResource Ink}"/>
+                          <Button Style="{StaticResource Remove}" Tag="{Binding}" Click="RemoveWord" Margin="8,0,0,0"/>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Width="130" Margin="0,0,8,8">
+                  <Rectangle RadiusX="16" RadiusY="16" Stroke="#B9BCC2" StrokeThickness="1" StrokeDashArray="3 3"/>
+                  <TextBox x:Name="Draft" FontSize="14" Background="Transparent" BorderThickness="0" Padding="10,6" Foreground="{StaticResource Ink}" TextChanged="DraftChanged" KeyDown="DraftKeyDown"/>
+                  <TextBlock x:Name="DraftHint" Text="+ Add a word" FontSize="14" Foreground="{StaticResource Muted}" Margin="13,6,0,0" IsHitTestVisible="False"/>
+                </Grid>
+              </WrapPanel>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource Section}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="Fixes" Style="{StaticResource Label}"/><TextBlock Text="When Softly hears the left, it types the right. Leave the right empty to drop a word." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <StackPanel Grid.Column="1">
+                <Grid Margin="0,0,0,8">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="36"/></Grid.ColumnDefinitions>
+                  <TextBlock Text="HEARD" FontSize="12" Foreground="{StaticResource Muted}"/>
+                  <TextBlock Grid.Column="2" Text="TYPES" FontSize="12" Foreground="{StaticResource Muted}"/>
+                </Grid>
+                <ItemsControl x:Name="RuleList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0" Padding="0,10">
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="36"/></Grid.ColumnDefinitions>
+                          <TextBlock Text="{Binding From}" FontSize="14" Foreground="{StaticResource Muted}"/>
+                          <TextBlock Grid.Column="1" Text="→" FontSize="13" Foreground="{StaticResource Faint}"/>
+                          <TextBlock Grid.Column="2" Text="{Binding Shown}" FontSize="14" FontWeight="{Binding Weight}" FontStyle="{Binding Style}" Foreground="{Binding Brush}"/>
+                          <Button Grid.Column="3" Style="{StaticResource Remove}" HorizontalAlignment="Right" Tag="{Binding}" Click="RemoveRule"/>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0" Padding="0,10,0,0">
+                  <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="36"/></Grid.ColumnDefinitions>
+                    <Grid>
+                      <TextBox x:Name="HeardBox" Style="{StaticResource Field}" TextChanged="RuleDraftChanged" KeyDown="RuleKeyDown"/>
+                      <TextBlock x:Name="HeardHint" Text="Heard…" Style="{StaticResource Placeholder}"/>
+                    </Grid>
+                    <TextBlock Grid.Column="1" Text="→" FontSize="13" Foreground="{StaticResource Faint}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    <Grid Grid.Column="2">
+                      <TextBox x:Name="TypedBox" Style="{StaticResource Field}" TextChanged="RuleDraftChanged" KeyDown="RuleKeyDown"/>
+                      <TextBlock x:Name="TypedHint" Text="Types…" Style="{StaticResource Placeholder}"/>
+                    </Grid>
+                    <Button x:Name="AddRuleButton" Grid.Column="3" HorizontalAlignment="Right" Cursor="Hand" Click="AddRule" IsEnabled="False" ToolTip="Add fix">
+                      <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                          <Grid Width="24" Height="24">
+                            <Ellipse x:Name="Disc" Fill="{StaticResource Accent}"/>
+                            <TextBlock Text="+" Foreground="White" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
+                          </Grid>
+                          <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Disc" Property="Fill" Value="#C9CCD2"/></Trigger>
+                          </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                      </Button.Template>
+                    </Button>
+                  </Grid>
+                </Border>
+              </StackPanel>
+            </Grid>
+          </Border>
+        </StackPanel>
+
+        <!-- Shortcut -->
+        <StackPanel x:Name="ShortcutPanel" Visibility="Collapsed">
+          <TextBlock Text="Shortcut" Style="{StaticResource Title}"/>
+          <TextBlock Text="How you start and stop, and what happens around a dictation." Style="{StaticResource Subtitle}"/>
+          <Border Style="{StaticResource FirstSection}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="Key" Style="{StaticResource Label}"/><TextBlock Text="Esc cancels while the pill is up." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <StackPanel Grid.Column="1">
+                <Border Style="{StaticResource Row}" Padding="0,0,0,16">
+                  <DockPanel>
+                    <Button x:Name="ShortcutChange" DockPanel.Dock="Right" Content="Change" Style="{StaticResource LinkButton}" Click="ChangeShortcut"/>
+                    <Border x:Name="ShortcutCap" Style="{StaticResource Keycap}" Padding="16,9"><TextBlock x:Name="ShortcutKey" Text="Right Alt" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource Ink}"/></Border>
+                    <TextBlock x:Name="ShortcutWaiting" Text="Press a key…" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource Accent}" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    <TextBlock x:Name="ShortcutSub" FontSize="14" Foreground="{StaticResource Muted}" Margin="14,0,16,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                  </DockPanel>
+                </Border>
+                <Border Style="{StaticResource LastRow}">
+                  <DockPanel>
+                    <CheckBox x:Name="TapSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Click="TapChanged"/>
+                    <StackPanel><TextBlock Text="Tap to start and stop" Style="{StaticResource RowTitle}"/><TextBlock Text="Off: hold the key while you talk, let go to finish" Style="{StaticResource RowSub}"/></StackPanel>
+                  </DockPanel>
+                </Border>
+              </StackPanel>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource Section}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="While you talk" Style="{StaticResource Label}"/><TextBlock Text="What Softly does around a dictation." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <StackPanel Grid.Column="1" Margin="0,-14,0,0">
+                <Border Style="{StaticResource Row}">
+                  <DockPanel>
+                    <ComboBox x:Name="MicBox" DockPanel.Dock="Right" Width="240" FontSize="14" VerticalAlignment="Center" SelectionChanged="MicChanged"/>
+                    <StackPanel><TextBlock Text="Microphone" Style="{StaticResource RowTitle}"/><TextBlock Text="Recording is capped at 15 minutes" Style="{StaticResource RowSub}"/></StackPanel>
+                  </DockPanel>
+                </Border>
+                <Border Style="{StaticResource Row}">
+                  <DockPanel>
+                    <CheckBox x:Name="MediaSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Click="MediaChanged"/>
+                    <StackPanel><TextBlock Text="Pause music" Style="{StaticResource RowTitle}"/><TextBlock Text="Whatever is playing pauses, then picks up where it left off" Style="{StaticResource RowSub}"/></StackPanel>
+                  </DockPanel>
+                </Border>
+                <Border Style="{StaticResource LastRow}">
+                  <DockPanel>
+                    <CheckBox x:Name="SoundsSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Click="SoundsChanged"/>
+                    <StackPanel><TextBlock Text="Sounds" Style="{StaticResource RowTitle}"/><TextBlock Text="A soft cue when recording starts and ends" Style="{StaticResource RowSub}"/></StackPanel>
+                  </DockPanel>
+                </Border>
+              </StackPanel>
+            </Grid>
+          </Border>
+        </StackPanel>
+
+        <!-- Look -->
+        <StackPanel x:Name="LookPanel" Visibility="Collapsed">
+          <TextBlock Text="Look" Style="{StaticResource Title}"/>
+          <TextBlock Text="The pill that floats over your work while you talk." Style="{StaticResource Subtitle}"/>
+          <Border Background="{StaticResource Well}" CornerRadius="12" Height="150" Margin="0,0,0,32">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+              <ContentControl x:Name="PillSample" HorizontalAlignment="Center"/>
+              <Button Content="Play preview" Style="{StaticResource LinkButton}" FontSize="13" HorizontalAlignment="Center" Margin="0,14,0,0" Click="PreviewClick"/>
             </StackPanel>
-            <TextBlock Text="SPEECH MODEL" Style="{StaticResource Caption}" Margin="0,29,0,0"/>
-            <StackPanel x:Name="ModelList" Margin="0,10,0,0"/>
-            <DockPanel Margin="0,29,0,0">
-              <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" FontSize="13" Content="Preview" Click="PreviewClick"/>
-              <TextBlock Text="PILL STYLE" Style="{StaticResource Caption}" VerticalAlignment="Center"/>
-            </DockPanel>
-            <WrapPanel x:Name="ThemeGrid" Margin="-5,10,0,0"/>
-            <TextBlock Text="SHORTCUT" Style="{StaticResource Caption}" Margin="0,29,0,0"/>
-            <TextBlock x:Name="HookText" FontSize="13" Foreground="{StaticResource Green}" Margin="0,12,0,0" Text="✓ Right Alt is reserved for Softly while it runs"/>
-          </StackPanel>
-        </Grid>
-      </ScrollViewer>
-    </Grid>
+          </Border>
+          <Border Style="{StaticResource Section}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="Pill style" Style="{StaticResource Label}"/><TextBlock Text="Midnight follows your Windows accent colour." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <WrapPanel x:Name="ThemeGrid" Grid.Column="1" Margin="0,-6,0,0"/>
+            </Grid>
+          </Border>
+        </StackPanel>
+
+        <!-- About -->
+        <StackPanel x:Name="AboutPanel" Visibility="Collapsed">
+          <TextBlock Text="About" Style="{StaticResource Title}"/>
+          <TextBlock Text="Free and open source. Your voice and your words never leave this PC." Style="{StaticResource Subtitle}"/>
+          <Border Style="{StaticResource FirstSection}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock x:Name="VersionText" Text="Softly" Style="{StaticResource Label}"/><TextBlock Text="Checked quietly every few hours." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <DockPanel Grid.Column="1">
+                <Button x:Name="UpdateAction" DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Check for updates" Click="UpdateActionClick"/>
+                <TextBlock x:Name="UpdateNote" FontSize="14" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,16,0" Text="Updates come from GitHub Releases."/>
+              </DockPanel>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource Section}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="On this PC" Style="{StaticResource Label}"/><TextBlock Text="Audio is held in memory and dropped after each dictation." Style="{StaticResource LabelDetail}"/></StackPanel>
+              <StackPanel Grid.Column="1" Margin="0,-14,0,0">
+                <Border Style="{StaticResource Row}">
+                  <DockPanel>
+                    <TextBlock x:Name="HookText" DockPanel.Dock="Right" FontSize="13" FontWeight="Medium" Foreground="{StaticResource Green}" VerticalAlignment="Center"/>
+                    <StackPanel><TextBlock Text="Keyboard" Style="{StaticResource RowTitle}"/><TextBlock Text="The dictation key is reserved for Softly while it runs" Style="{StaticResource RowSub}"/></StackPanel>
+                  </DockPanel>
+                </Border>
+                <Border Style="{StaticResource Row}">
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Show folder" Style="{StaticResource LinkButton}" Click="ShowModelsClick"/>
+                    <StackPanel><TextBlock Text="Speech models" Style="{StaticResource RowTitle}"/><TextBlock x:Name="ModelText" Text="In %LOCALAPPDATA%\Softly\Models" Style="{StaticResource RowSub}"/></StackPanel>
+                  </DockPanel>
+                </Border>
+                <Border Style="{StaticResource LastRow}">
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Open" Style="{StaticResource LinkButton}" Click="SourceClick"/>
+                    <StackPanel><TextBlock Text="Source code" Style="{StaticResource RowTitle}"/><TextBlock Text="github.com/denonmaryland/softly" Style="{StaticResource RowSub}"/></StackPanel>
+                  </DockPanel>
+                </Border>
+              </StackPanel>
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </ScrollViewer>
   </Grid>
 </Window>

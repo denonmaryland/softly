@@ -28,6 +28,9 @@ public sealed class AppState : INotifyPropertyChanged
     private string speechModel = Settings.SpeechModel;
     private string downloadingModel = "";
     private string language = Settings.Language;
+    private string microphone = Settings.Microphone;
+    private List<Microphones.Device> microphones = new();
+    private List<(string Text, DateTime At)> recent = new();
     private Updater.Phase updatePhase = Updater.Phase.Idle;
     private string updateVersion = "", updateError = "";
     private ModelDownloader.Phase downloadPhase = ModelDownloader.Phase.Idle;
@@ -105,6 +108,32 @@ public sealed class AppState : INotifyPropertyChanged
     {
         get => language;
         set { if (Set(ref language, value, nameof(ModelSubtitle), nameof(ModelActionText))) Settings.Language = value; }
+    }
+
+    /// <summary>Endpoint ID of the chosen microphone; empty follows the default.</summary>
+    public string Microphone
+    {
+        get => microphone;
+        set { if (Set(ref microphone, value)) Settings.Microphone = value; }
+    }
+
+    public List<Microphones.Device> Microphones => microphones;
+
+    public void RefreshMicrophones()
+    {
+        var found = Softly.Microphones.All();
+        if (found.SequenceEqual(microphones)) return;
+        microphones = found;
+        Raise(new[] { nameof(Microphones) });
+    }
+
+    /// <summary>The last few dictations, newest first. Memory only.</summary>
+    public IReadOnlyList<(string Text, DateTime At)> Recent => recent;
+
+    public void AddRecent(string text)
+    {
+        recent = new[] { (text, DateTime.Now) }.Concat(recent.Where(r => r.Text != text).Take(4)).ToList();
+        Raise(new[] { nameof(Recent) });
     }
 
     /// <summary>Id of the model being downloaded; empty when none is.</summary>
