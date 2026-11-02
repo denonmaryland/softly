@@ -55,6 +55,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "tapToStart") }
     }
 
+    /// Unique ID of the chosen input device; empty follows the system default.
+    static var microphone: String {
+        get { UserDefaults.standard.string(forKey: "microphone") ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: "microphone") }
+    }
+
     /// Ending a dictation with "submit" presses Enter after the paste.
     static var submitWord: Bool {
         get { UserDefaults.standard.object(forKey: "submitWord") as? Bool ?? false }

@@ -33,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         engine.onStatusChange = { [weak self] in self?.refresh() }
+        engine.onDictated = { [weak self] text in self?.state.addRecent(text) }
         state.poll = { [weak self] in self?.refresh() }
         state.showModelFolder = { [weak self] in self?.showModelFolder() }
         state.reloadModel = { [weak self] in self?.engine.loadModel() }
@@ -55,6 +56,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.state.update = self.updater.state
         }
         updater.startBackgroundChecks()
+
+        if Snapshots.runIfAsked(state: state) {
+            NSApp.terminate(nil)
+            return
+        }
 
         setUpMainMenu()
         setUpStatusItem()

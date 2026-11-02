@@ -10,6 +10,8 @@ final class DictationEngine {
     private(set) var state: RecorderState = .idle
     private(set) var modelStatus: Transcriber.Status = .loading
     var onStatusChange: () -> Void = {}
+    /// Called with each pasted transcript, for the window's Recent list.
+    var onDictated: (String) -> Void = { _ in }
     /// The last few dictations, newest first. Held in memory only, like the
     /// Linux popover's list, so nothing said is ever written to disk.
     private(set) var recent: [String] = []
@@ -235,6 +237,7 @@ final class DictationEngine {
         }
         if !text.isEmpty {
             recent = [text] + recent.filter { $0 != text }.prefix(4)
+            onDictated(text)
         }
         Paster.paste(text, submit: submit)
         // Let the paste land, confirm with ✓, then close.

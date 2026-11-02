@@ -53,6 +53,15 @@ final class AppState: ObservableObject {
     /// Id of the model being downloaded, if any.
     @Published var downloadingModel: String?
     @Published var update: Updater.State = .idle
+    /// The window's current screen; the delegate jumps to a screen too.
+    @Published var section: WindowSection = .home
+    /// The last few dictations, newest first. Memory only, like the engine's.
+    @Published private(set) var recent: [RecentDictation] = []
+    /// Unique ID of the chosen microphone; empty follows the system default.
+    @Published var microphone = Settings.microphone {
+        didSet { Settings.microphone = microphone }
+    }
+    @Published private(set) var microphones: [Microphones.Device] = []
     @Published var modelDownload: ModelDownloader.State = .idle
 
     /// Wired by the delegate; views only call them.
@@ -68,6 +77,19 @@ final class AppState: ObservableObject {
     var cancelCapture: () -> Void = {}
     var checkForUpdates: () -> Void = {}
     var installUpdate: () -> Void = {}
+    func addRecent(_ text: String) {
+        recent = [RecentDictation(text: text, date: Date())] + recent.filter { $0.text != text }.prefix(4)
+    }
+
+    func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    func refreshMicrophones() {
+        update(\.microphones, Microphones.all())
+    }
+
     /// Asks the delegate to re-read engine and hotkey state into this object.
     var poll: () -> Void = {}
 
@@ -105,4 +127,10 @@ final class AppState: ObservableObject {
             return "Ready: \(tapToStart ? "tap" : "hold") \(hotkey.label) to dictate"
         }
     }
+}
+
+struct RecentDictation: Identifiable, Equatable {
+    let id = UUID()
+    let text: String
+    let date: Date
 }

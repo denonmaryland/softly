@@ -36,6 +36,12 @@ final class AudioRecorder: @unchecked Sendable {
     func start() throws {
         guard !running else { return }
         let input = engine.inputNode
+        // A microphone picked in the window; otherwise the system default.
+        if let device = Microphones.device(uid: Settings.microphone), let unit = input.audioUnit {
+            var id = device.id
+            AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
+                                 &id, UInt32(MemoryLayout<AudioDeviceID>.size))
+        }
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0 else { throw RecorderError.noInputDevice }
         guard let converter = AVAudioConverter(from: format, to: whisperFormat) else {
