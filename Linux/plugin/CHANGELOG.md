@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- No plugin changes; the version follows the Mac and Windows apps, which
+  now keep their macOS permissions across updates.
+
 ## 0.2.0
 
 - Popover wording: the vocabulary and status lines name Softly rather than
