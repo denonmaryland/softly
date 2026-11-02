@@ -47,6 +47,9 @@ public sealed class DictationEngine
 
     // Inputs
 
+    /// <summary>Timestamp of the last trigger press on the hook thread, for the latency log.</summary>
+    public Func<long>? PressTicks;
+
     public void Press() => Handle(GestureEvent.Press);
     public void Release() => Handle(GestureEvent.Release);
     public void Toggle() => Handle(GestureEvent.Toggle);
@@ -153,6 +156,7 @@ public sealed class DictationEngine
             OnStatusChange();
             return;
         }
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         try
         {
             recorder.Start();
@@ -163,9 +167,14 @@ public sealed class DictationEngine
             controller.Send(GestureEvent.Reset, PillModel.Now, RecorderState.Idle);
             return;
         }
+        long t1 = System.Diagnostics.Stopwatch.GetTimestamp();
         session++;
         State = RecorderState.Recording;
         Pill.BeginSession();
+        long t2 = System.Diagnostics.Stopwatch.GetTimestamp();
+        double Ms(long a, long b) => (b - a) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        long press = PressTicks?.Invoke() ?? 0;
+        App.Log($"start: key->handler {(press > 0 ? Ms(press, t0).ToString("0") : "?")} ms, mic {Ms(t0, t1):0} ms, pill {Ms(t1, t2):0} ms");
         Sounds.PlayOpen();
         MediaPauser.Shared.Pause();
         capTimer?.Stop();

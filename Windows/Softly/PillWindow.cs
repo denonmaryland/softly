@@ -55,6 +55,20 @@ public sealed class PillWindow : Window
         surface.Running = true;
     }
 
+    /// <summary>
+    /// Builds the window, its layered surface and the renderer once, off
+    /// screen, so the first key press after launch does not pay for it.
+    /// </summary>
+    public void WarmUp()
+    {
+        if (IsVisible) return;
+        Left = -20000;
+        Top = -20000;
+        Show();
+        UpdateLayout();
+        Hide();
+    }
+
     public void Dismiss()
     {
         surface.Running = false;

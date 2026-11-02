@@ -28,9 +28,13 @@ public sealed class HotkeyMonitor : IDisposable
     private readonly LowLevelKeyboardProc callback; // kept alive for the hook's lifetime
     private readonly Dispatcher dispatcher;
     private IntPtr hook;
-    private bool triggerDown;
+    private volatile bool triggerDown;
+    private Thread? thread;
+    private uint threadId;
 
     public bool IsRunning => hook != IntPtr.Zero;
+    /// <summary>When the last trigger press arrived, for latency logging.</summary>
+    public long PressTicks { get; private set; }
 
     public HotkeyMonitor(Dispatcher dispatcher)
     {
@@ -38,17 +42,44 @@ public sealed class HotkeyMonitor : IDisposable
         callback = Handle;
     }
 
+    /// <summary>
+    /// Installs the hook on a dedicated high-priority thread with its own
+    /// message loop. Windows calls a low-level hook on the thread that
+    /// installed it and holds every keystroke on the system until it returns,
+    /// so it must not share the UI thread: when the PC is busy, a starved UI
+    /// thread made the trigger (and all typing) lag.
+    /// </summary>
     public bool Start()
     {
         if (hook != IntPtr.Zero) return true;
-        hook = SetWindowsHookEx(WH_KEYBOARD_LL, callback, GetModuleHandle(null), 0);
+        using var ready = new ManualResetEventSlim();
+        thread = new Thread(() =>
+        {
+            threadId = GetCurrentThreadId();
+            hook = SetWindowsHookEx(WH_KEYBOARD_LL, callback, GetModuleHandle(null), 0);
+            ready.Set();
+            if (hook == IntPtr.Zero) return;
+            while (GetMessage(out MSG msg, IntPtr.Zero, 0, 0) > 0)
+            {
+                TranslateMessage(ref msg);
+                DispatchMessage(ref msg);
+            }
+            UnhookWindowsHookEx(hook);
+            hook = IntPtr.Zero;
+        })
+        {
+            IsBackground = true,
+            Priority = ThreadPriority.Highest,
+            Name = "Softly keyboard hook",
+        };
+        thread.Start();
+        ready.Wait(3000);
         return hook != IntPtr.Zero;
     }
 
     public void Dispose()
     {
-        if (hook != IntPtr.Zero) UnhookWindowsHookEx(hook);
-        hook = IntPtr.Zero;
+        if (threadId != 0) PostThreadMessage(threadId, WM_QUIT, IntPtr.Zero, IntPtr.Zero);
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -58,7 +89,7 @@ public sealed class HotkeyMonitor : IDisposable
         public IntPtr dwExtraInfo;
     }
 
-    /// <summary>Runs on the UI thread (the thread that installed the hook).</summary>
+    /// <summary>Runs on the hook thread; anything slow goes to the UI dispatcher.</summary>
     private IntPtr Handle(int nCode, IntPtr wParam, IntPtr lParam)
     {
         if (nCode < 0) return CallNextHookEx(hook, nCode, wParam, lParam);
@@ -73,18 +104,19 @@ public sealed class HotkeyMonitor : IDisposable
             if (down && !triggerDown)
             {
                 triggerDown = true;
-                dispatcher.BeginInvoke(OnPress);
+                PressTicks = System.Diagnostics.Stopwatch.GetTimestamp();
+                dispatcher.BeginInvoke(DispatcherPriority.Send, OnPress);
             }
             else if (up && triggerDown)
             {
                 triggerDown = false;
-                dispatcher.BeginInvoke(OnRelease);
+                dispatcher.BeginInvoke(DispatcherPriority.Send, OnRelease);
             }
             return (IntPtr)1;
         }
         if (down && !injected)
         {
-            // Esc stays synchronous: it decides whether the key is swallowed.
+            // Esc decides here whether the key is swallowed; OnEscape must be quick.
             if (k.vkCode == VK_ESCAPE && OnEscape()) return (IntPtr)1;
             if (triggerDown) dispatcher.BeginInvoke(OnChord);
         }
@@ -99,4 +131,25 @@ public sealed class HotkeyMonitor : IDisposable
     private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    private const uint WM_QUIT = 0x0012;
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MSG
+    {
+        public IntPtr hwnd;
+        public uint message;
+        public IntPtr wParam, lParam;
+        public uint time;
+        public int x, y;
+    }
+    [DllImport("user32.dll")]
+    private static extern int GetMessage(out MSG msg, IntPtr hWnd, uint min, uint max);
+    [DllImport("user32.dll")]
+    private static extern bool TranslateMessage(ref MSG msg);
+    [DllImport("user32.dll")]
+    private static extern IntPtr DispatchMessage(ref MSG msg);
+    [DllImport("user32.dll")]
+    private static extern bool PostThreadMessage(uint threadId, uint msg, IntPtr wParam, IntPtr lParam);
 }

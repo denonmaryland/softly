@@ -26,6 +26,25 @@ public sealed class AudioRecorder
 
     public double CurrentRMS { get { lock (gate) return level; } }
 
+    /// <summary>
+    /// Touches the capture device and the resampler once so the first
+    /// recording does not pay for device activation and JIT. The microphone
+    /// is never opened.
+    /// </summary>
+    public static void WarmUp()
+    {
+        try
+        {
+            using var cap = new WasapiCapture();
+            var buffer = new BufferedWaveProvider(cap.WaveFormat) { ReadFully = false };
+            ISampleProvider provider = buffer.ToSampleProvider();
+            if (cap.WaveFormat.Channels == 2) provider = provider.ToMono();
+            var resampler = new WdlResamplingSampleProvider(provider, 16_000);
+            resampler.Read(new float[64], 0, 64);
+        }
+        catch (Exception) { }
+    }
+
     public void Start()
     {
         if (running) return;

@@ -32,6 +32,10 @@ public partial class App : Application
             Shutdown();
             return;
         }
+        // Dictation has to answer the key at once even when the PC is busy, and
+        // launches through a scheduled task or the updater inherit below-normal.
+        try { Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.AboveNormal; } catch (Exception) { }
+
         DispatcherUnhandledException += (_, args) =>
         {
             Log("Unhandled: " + args.Exception);
@@ -50,8 +54,15 @@ public partial class App : Application
             OnPress = () => engine.Press(),
             OnRelease = () => engine.Release(),
             OnChord = () => engine.Chord(),
-            OnEscape = () => engine.Escape(),
+            // Called on the hook thread: decide from the pill's flag, act on the UI thread.
+            OnEscape = () =>
+            {
+                if (!pill.Showing) return false;
+                Dispatcher.BeginInvoke(DispatcherPriority.Send, engine.CancelNow);
+                return true;
+            },
         };
+        engine.PressTicks = () => hotkeys.PressTicks;
         engine.OnStatusChange = Refresh;
         state.ShowModelFolder = ShowModelFolder;
         state.ReloadModel = () => engine.LoadModel();
@@ -84,6 +95,7 @@ public partial class App : Application
             "preview" => Run(() => engine.Preview()),
             "open" => Run(OpenWindow),
             "cancel" => Run(() => engine.CancelNow()),
+            "toggle" => Run(() => engine.Toggle()),
             "check-update" => Run(() => updater.Check()),
             "download-model" => Run(() => downloader.Start()),
             "download-state" => Task.FromResult($"{downloader.State} {downloader.Progress:0.00} {downloader.Error}"),
@@ -99,6 +111,12 @@ public partial class App : Application
 
         EnsureStartMenuShortcut();
         bool hooked = hotkeys.Start();
+        // Pay the first-press costs now, while nobody is waiting on them.
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () =>
+        {
+            panel.WarmUp();
+            AudioRecorder.WarmUp();
+        });
         engine.LoadModel();
         Refresh();
 
