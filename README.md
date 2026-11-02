@@ -63,7 +63,9 @@ Windows 10 or 11, 64-bit. A GPU with Vulkan makes transcription fast; without on
 1. Download `Softly-windows.zip` from the [latest release](https://github.com/denonmaryland/softly/releases/latest) and unzip it anywhere, for example `C:\Softly`.
 2. Run **Softly.exe**. The build is not code-signed, so SmartScreen shows "Windows protected your PC": press **More info**, then **Run anyway**. Nothing else needs installing; .NET is bundled.
 3. Softly opens its window. Press **Download speech model** (181 MB, once). The file is verified and kept in `%LOCALAPPDATA%\Softly\Models`.
-4. Hold **Right Alt** and talk. The tray icon opens the settings window and offers updates.
+4. Hold **Right Alt** and talk.
+
+Softly lives in the tray, not the taskbar. It adds itself to the Start menu on first run, so search for **Softly** to open its window again; launching it while it is already running brings the window forward. The tray icon (under the ^ arrow) has the same window and updates.
 
 Details and the build steps are in [Windows/README.md](Windows/README.md).
 

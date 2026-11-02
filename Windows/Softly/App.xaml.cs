@@ -26,6 +26,9 @@ public partial class App : Application
         single = new Mutex(true, "Softly.SingleInstance", out bool first);
         if (!first)
         {
+            // Already running in the tray: launching again (Start menu, desktop
+            // shortcut) brings its window forward instead of doing nothing.
+            AskRunningCopyToOpen();
             Shutdown();
             return;
         }
@@ -94,6 +97,7 @@ public partial class App : Application
         });
         control.Start();
 
+        EnsureStartMenuShortcut();
         bool hooked = hotkeys.Start();
         engine.LoadModel();
         Refresh();
@@ -103,6 +107,51 @@ public partial class App : Application
     }
 
     private static Task<string> Run(Action action) { action(); return Task.FromResult("ok"); }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool AllowSetForegroundWindow(int processId);
+
+    /// <summary>
+    /// The download is a plain folder, so put Softly in the Start menu (and
+    /// Start search) the first time it runs, pointing at wherever it lives.
+    /// </summary>
+    private static void EnsureStartMenuShortcut()
+    {
+        try
+        {
+            string exe = Environment.ProcessPath ?? "";
+            if (exe.Length == 0) return;
+            string link = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "Softly.lnk");
+            var shellType = Type.GetTypeFromProgID("WScript.Shell");
+            if (shellType == null) return;
+            dynamic shell = Activator.CreateInstance(shellType)!;
+            if (File.Exists(link) && string.Equals((string)shell.CreateShortcut(link).TargetPath, exe, StringComparison.OrdinalIgnoreCase)) return;
+            dynamic shortcut = shell.CreateShortcut(link);
+            shortcut.TargetPath = exe;
+            shortcut.WorkingDirectory = Path.GetDirectoryName(exe);
+            shortcut.IconLocation = exe + ",0";
+            shortcut.Description = "Softly dictation";
+            shortcut.Save();
+        }
+        catch (Exception e) { Log("Start menu shortcut: " + e.Message); }
+    }
+
+    private static void AskRunningCopyToOpen()
+    {
+        // The launched copy owns the foreground right now; hand it over so the
+        // running copy's window can come to the front.
+        AllowSetForegroundWindow(-1);
+        try
+        {
+            using var pipe = new System.IO.Pipes.NamedPipeClientStream(".", "softly-control", System.IO.Pipes.PipeDirection.InOut);
+            pipe.Connect(2000);
+            using var writer = new StreamWriter(pipe) { AutoFlush = true };
+            using var reader = new StreamReader(pipe);
+            writer.WriteLine("open");
+            reader.ReadLine();
+        }
+        catch (Exception) { }
+    }
 
     private void Refresh()
     {
