@@ -45,6 +45,10 @@ Panel {
   property string language: "en"
   property var languages: []       // [{code, name}]
   property bool langsOpen: false
+  // "main" (status, model, switches, recent), "words" or "settings"
+  property string page: "main"
+  // The settings page is short enough to show its key and language choices unfolded.
+  onPageChanged: if (page === "settings") { keysOpen = true; langsOpen = true }
   readonly property string languageName: (languages.find(l => l.code === language) || { name: language }).name
   property string heardDraft: ""
   property string typedDraft: ""
@@ -222,7 +226,7 @@ Panel {
   Component.onCompleted: refresh()
   onOpenedChanged: {
     if (opened) { message = ""; refresh(); poll.restart() }
-    else { poll.stop(); stylesOpen = false; keysOpen = false; langsOpen = false; keyboard.forceActiveFocus() }
+    else { poll.stop(); stylesOpen = false; keysOpen = false; langsOpen = false; page = "main"; keyboard.forceActiveFocus() }
   }
 
   // Daemon state changes outside this panel; keep the status line honest while it is open.
@@ -233,6 +237,8 @@ Panel {
     function open(): void { root.open() }
     function close(): void { root.close() }
     function toggle(): void { root.toggle() }
+    // Opens on a page: main, words or settings.
+    function show(name: string): void { root.page = name; root.open() }
     function state(): string {
       return JSON.stringify({loaded: root.loaded, hotkey: root.hotkey, keysOpen: root.keysOpen, sounds: root.sounds, tapToStart: root.tapToStart, pillTheme: root.pillTheme, vocabulary: root.vocabulary,
                              service: root.service, daemon: root.daemon, model: root.model, message: root.message})
@@ -286,7 +292,7 @@ Panel {
       parent: root.popup ? root.popup.slot : parking
       anchors.fill: parent
       blocked: wordField.activeFocus || heardField.activeFocus || typedField.activeFocus
-      onCloseRequested: root.close()
+      onCloseRequested: if (root.page !== "main") root.page = "main"; else root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onMoveRequested: function(dx, dy) {
         if (dy) root.cursor = Math.max(0, Math.min(root.rowCount - 1, root.cursor + dy))
@@ -310,8 +316,26 @@ Panel {
         width: scroller.width
         spacing: Style.space(12)
 
+        // ---------- Sub-page title, with the way back ----------
+        Column {
+          visible: root.page !== "main"
+          width: parent.width
+          spacing: Style.space(3)
+          Text {
+            text: "‹ Softly"
+            color: root.accent
+            font.family: root.family; font.pixelSize: Style.font.caption; font.weight: Font.DemiBold
+            MouseArea { anchors.fill: parent; anchors.margins: -Style.space(6); cursorShape: Qt.PointingHandCursor; onClicked: root.page = "main" }
+          }
+          Text {
+            text: root.page === "words" ? "Words" : "Key, language & pill"
+            color: root.fg; font.family: root.family; font.pixelSize: Style.font.title; font.bold: true
+          }
+        }
+
         // ---------- Header: title and live status ----------
         Column {
+          visible: root.page === "main"
           width: parent.width
           spacing: Style.space(3)
           Text {
@@ -340,9 +364,10 @@ Panel {
           }
         }
 
+
         // ---------- Set up: three writes, each with consent and a backup ----------
         Column {
-          visible: root.loaded && root.setup && (!root.setup.complete || (root.setup.hotkey && root.setup.hotkey !== root.hotkey))
+          visible: (root.page === "main") && (root.loaded && root.setup && (!root.setup.complete || (root.setup.hotkey && root.setup.hotkey !== root.hotkey)))
           width: parent.width
           spacing: Style.space(8)
           Text {
@@ -389,9 +414,96 @@ Panel {
             onClicked: root.runSetup()
           }
         }
-        PanelSeparator { visible: root.loaded && root.setup && !root.setup.complete; foreground: root.fg }
+
+        PanelSeparator { visible: (root.page === "main") && (root.loaded && root.setup && !root.setup.complete); foreground: root.fg }
+
+
+        // ---------- Speech model: three sizes of the same engine ----------
+        Column {
+          visible: root.page === "main"
+          width: parent.width
+          spacing: Style.space(8)
+          Column {
+            width: parent.width
+            spacing: Style.space(2)
+            Item {
+              width: parent.width
+              height: modelTitle.implicitHeight
+              Text { id: modelTitle; text: "Model"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body; font.weight: Font.DemiBold }
+              Text {
+                anchors.right: parent.right; anchors.baseline: modelTitle.baseline
+                text: root.speechModel === "parakeet" ? "Detects language" : root.languageName
+                color: root.fg; opacity: langLinkMouse.containsMouse ? 0.9 : 0.55
+                font.family: root.family; font.pixelSize: Style.font.caption
+                MouseArea { id: langLinkMouse; anchors.fill: parent; anchors.margins: -Style.space(4); hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.page = "settings" }
+              }
+            }
+            // Only when there is something to say: a failure, a model Softly
+            // did not pick, or Parakeet's missing vocabulary hints.
+            Text {
+              readonly property string note: root.download && root.download.phase === "failed" ? "Download failed · " + (root.download.error || "try again")
+                : root.speechModel === "" && root.model ? root.model.replace(/^ggml-/, "").replace(/\.bin$/, "") + " · set in Voxtype"
+                : root.speechModel === "parakeet" ? "Vocabulary hints don't apply to Parakeet; fixes do."
+                : ""
+              visible: note.length > 0
+              width: parent.width; wrapMode: Text.WordWrap
+              text: note
+              color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
+            }
+          }
+          Row {
+            id: modelChips
+            width: parent.width
+            spacing: Style.space(6)
+            readonly property real cell: Math.floor((width - (root.models.length - 1) * spacing) / Math.max(1, root.models.length))
+            Repeater {
+              model: root.models
+              delegate: Rectangle {
+                id: mchip
+                required property var modelData
+                readonly property bool selected: modelData.id === root.speechModel
+                readonly property bool fetching: !!(root.download && root.download.id === modelData.id && root.download.phase !== "failed")
+                width: modelChips.cell; height: Style.space(42); radius: Style.space(8)
+                color: root.alphaOf(root.fg, mchipMouse.containsMouse ? 0.1 : 0.05)
+                border.width: selected ? 2 : 1
+                border.color: selected ? root.accent : root.alphaOf(root.fg, 0.14)
+                Column {
+                  anchors.centerIn: parent
+                  spacing: Style.space(1)
+                  Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: mchip.modelData.name
+                    color: root.fg
+                    opacity: mchip.selected ? 1 : 0.8
+                    font.family: root.family; font.pixelSize: Style.font.caption
+                    font.weight: mchip.selected ? Font.DemiBold : Font.Normal
+                  }
+                  Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: mchip.fetching ? (root.download.phase === "verifying" ? "Verifying…" : Math.round((root.download.progress || 0) * 100) + "% · cancel")
+                      : mchip.selected ? "In use"
+                      : mchip.modelData.downloaded ? "Ready"
+                      : mchip.modelData.sizeMB + " MB"
+                    color: root.fg
+                    opacity: 0.5
+                    font.family: root.family; font.pixelSize: Style.font.caption - 1
+                  }
+                }
+                MouseArea {
+                  id: mchipMouse
+                  anchors.fill: parent
+                  hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                  enabled: root.loaded && !root.busy
+                  onClicked: mchip.fetching ? root.cancelDownload() : root.chooseModel(mchip.modelData.id)
+                }
+              }
+            }
+          }
+        }
+
 
         SwitchRow {
+          visible: root.page === "main"
           width: parent.width
           title: "Play sounds"
           caption: "A subtle cue when recording starts and ends"
@@ -401,7 +513,9 @@ Panel {
           onHoveredIn: root.cursor = 0
         }
 
+
         SwitchRow {
+          visible: root.page === "main"
           width: parent.width
           title: "Tap to start and stop"
           caption: root.tapToStart ? "Tap once, talk, tap again to finish. Holding still works." : "Off: hold " + root.hotkeyLabel + " while you talk, let go to finish"
@@ -411,7 +525,9 @@ Panel {
           onHoveredIn: root.cursor = 1
         }
 
+
         SwitchRow {
+          visible: root.page === "main"
           width: parent.width
           title: "Say “submit” to send"
           caption: "End with “submit” and Softly presses Enter after pasting"
@@ -420,8 +536,139 @@ Panel {
           onToggled: root.setSubmit(!root.submitWord)
         }
 
+
+        // ---------- Recent dictations (runtime only; gone at logout) ----------
+        Column {
+          visible: root.page === "main"
+          width: parent.width
+          spacing: Style.space(8)
+          Item {
+            width: parent.width
+            height: recentHead.implicitHeight
+            Text {
+              id: recentHead
+              text: "RECENT"
+              color: root.fg
+              opacity: 0.6
+              font.family: root.family
+              font.pixelSize: Style.font.caption
+              font.weight: Font.DemiBold
+            }
+            Text {
+              anchors.right: parent.right
+              visible: root.recent.length > 0
+              text: "Clear"
+              color: root.fg
+              opacity: clearMouse.containsMouse ? 0.9 : 0.5
+              font.family: root.family
+              font.pixelSize: Style.font.caption
+              MouseArea { id: clearMouse; anchors.fill: parent; anchors.margins: -Style.space(4); hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.clearRecent() }
+            }
+          }
+          Text {
+            visible: root.loaded && root.recent.length === 0
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: "Nothing dictated yet this session. The last few transcripts show here so you can copy them again."
+            color: root.fg
+            opacity: 0.6
+            font.family: root.family
+            font.pixelSize: Style.font.caption
+          }
+          Repeater {
+            model: root.recent
+            delegate: Item {
+              required property var modelData
+              required property int index
+              width: content.width
+              height: entry.implicitHeight + Style.space(index === 0 ? 10 : 6)
+              Column {
+                id: entry
+                anchors.left: parent.left
+                anchors.right: copyButton.left
+                anchors.rightMargin: Style.space(8)
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Style.space(2)
+                Text {
+                  width: parent.width
+                  text: modelData.text
+                  color: root.fg
+                  opacity: index === 0 ? 1 : 0.8
+                  wrapMode: index === 0 ? Text.WordWrap : Text.NoWrap
+                  elide: Text.ElideRight
+                  maximumLineCount: index === 0 ? 4 : 1
+                  font.family: root.family
+                  font.pixelSize: index === 0 ? Style.font.body : Style.font.caption
+                }
+                Text {
+                  visible: index === 0
+                  text: root.ago(modelData.at)
+                  color: root.fg
+                  opacity: 0.5
+                  font.family: root.family
+                  font.pixelSize: Style.font.caption
+                }
+              }
+              PanelActionButton {
+                id: copyButton
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                iconText: "󰆏"
+                tooltipText: "Copy"
+                foreground: root.fg
+                fontFamily: root.family
+                fontSize: Style.font.caption
+                onClicked: root.copyText(modelData.text)
+              }
+            }
+          }
+        }
+
+
+        // ---------- The two sub-pages ----------
+        Column {
+          visible: root.page === "main"
+          width: parent.width
+          LinkRow { width: parent.width; title: "Words & fixes"; detail: String(root.vocabulary.length + root.fixes.length); onClicked: root.page = "words" }
+          LinkRow { width: parent.width; title: "Key, language & pill"; detail: root.hotkeyLabel + " · " + root.languageName; onClicked: root.page = "settings" }
+        }
+
+        Item {
+          visible: root.page === "main"
+          width: parent.width
+          height: Math.max(versionText.implicitHeight, updateButton.implicitHeight)
+          Text {
+            id: versionText
+            anchors.left: parent.left
+            anchors.right: updateButton.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+            elide: Text.ElideRight
+            text: "Softly " + root.version + (root.model ? " · " + root.model.replace(/^ggml-/, "").replace(/\.bin$/, "") + " · local" : "")
+                  + (root.update && root.update.error ? " · " + root.update.error : "")
+            color: root.fg
+            opacity: 0.6
+            font.family: root.family
+            font.pixelSize: Style.font.caption
+          }
+          Button {
+            id: updateButton
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.updateLabel
+            foreground: root.fg
+            fontFamily: root.family
+            fontSize: Style.font.caption
+            bordered: true
+            active: !!(root.update && root.update.available)
+            enabled: !root.checkingUpdate && !root.busy
+            onClicked: root.update && root.update.available ? root.installUpdate() : root.checkUpdate()
+          }
+        }
+
         // ---------- Dictation key: a short list that works on its own ----------
         Column {
+          visible: root.page === "settings"
           width: parent.width
           spacing: Style.space(8)
           Item {
@@ -492,8 +739,84 @@ Panel {
           }
         }
 
+
+        // ---------- Language: English, detect, or one of the common ones ----------
+        Column {
+          visible: root.page === "settings"
+          width: parent.width
+          spacing: Style.space(8)
+          Item {
+            width: parent.width
+            height: langText.implicitHeight
+            Column {
+              id: langText
+              width: parent.width - langLink.implicitWidth - Style.space(12)
+              spacing: Style.space(2)
+              Text { text: "Language"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body }
+              Text {
+                width: parent.width; wrapMode: Text.WordWrap
+                text: root.speechModel === "parakeet" ? "Parakeet detects the language itself"
+                  : root.languageName + (root.language === "en" ? "" : " · uses the multilingual model")
+                color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
+              }
+            }
+            Text {
+              id: langLink
+              anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+              text: root.langsOpen ? "Done" : "Change"
+              color: root.fg
+              opacity: langMouse.containsMouse ? 0.9 : 0.5
+              font.family: root.family; font.pixelSize: Style.font.caption
+              MouseArea {
+                id: langMouse
+                anchors.fill: parent; anchors.margins: -Style.space(4)
+                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                enabled: root.loaded
+                onClicked: root.langsOpen = !root.langsOpen
+              }
+            }
+          }
+          Flow {
+            id: langChips
+            visible: root.langsOpen
+            width: parent.width
+            spacing: Style.space(6)
+            readonly property real cell: Math.floor((width - 2 * spacing) / 3)
+            Repeater {
+              model: root.languages
+              delegate: Rectangle {
+                id: lchip
+                required property var modelData
+                readonly property bool selected: modelData.code === root.language
+                width: modelData.code === "auto" ? langChips.cell * 2 + langChips.spacing : langChips.cell
+                height: Style.space(28); radius: Style.space(8)
+                color: root.alphaOf(root.fg, lchipMouse.containsMouse ? 0.1 : 0.05)
+                border.width: selected ? 2 : 1
+                border.color: selected ? root.accent : root.alphaOf(root.fg, 0.14)
+                Text {
+                  anchors.centerIn: parent
+                  text: lchip.modelData.name
+                  color: root.fg
+                  opacity: lchip.selected ? 1 : 0.75
+                  font.family: root.family; font.pixelSize: Style.font.caption
+                  font.weight: lchip.selected ? Font.DemiBold : Font.Normal
+                }
+                MouseArea {
+                  id: lchipMouse
+                  anchors.fill: parent
+                  hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                  enabled: !root.busy
+                  onClicked: root.chooseLanguage(lchip.modelData.code)
+                }
+              }
+            }
+          }
+        }
+
+
         // ---------- Pill style: Omarchy's theme or a fixed look ----------
         Column {
+          visible: root.page === "settings"
           width: parent.width
           spacing: Style.space(8)
           Item {
@@ -622,237 +945,33 @@ Panel {
           }
         }
 
-        // ---------- Language: English, detect, or one of the common ones ----------
-        Column {
-          width: parent.width
-          spacing: Style.space(8)
-          Item {
-            width: parent.width
-            height: langText.implicitHeight
-            Column {
-              id: langText
-              width: parent.width - langLink.implicitWidth - Style.space(12)
-              spacing: Style.space(2)
-              Text { text: "Language"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body }
-              Text {
-                width: parent.width; wrapMode: Text.WordWrap
-                text: root.speechModel === "parakeet" ? "Parakeet detects the language itself"
-                  : root.languageName + (root.language === "en" ? "" : " · uses the multilingual model")
-                color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
-              }
-            }
-            Text {
-              id: langLink
-              anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-              text: root.langsOpen ? "Done" : "Change"
-              color: root.fg
-              opacity: langMouse.containsMouse ? 0.9 : 0.5
-              font.family: root.family; font.pixelSize: Style.font.caption
-              MouseArea {
-                id: langMouse
-                anchors.fill: parent; anchors.margins: -Style.space(4)
-                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                enabled: root.loaded
-                onClicked: root.langsOpen = !root.langsOpen
-              }
-            }
-          }
-          Flow {
-            id: langChips
-            visible: root.langsOpen
-            width: parent.width
-            spacing: Style.space(6)
-            readonly property real cell: Math.floor((width - 2 * spacing) / 3)
-            Repeater {
-              model: root.languages
-              delegate: Rectangle {
-                id: lchip
-                required property var modelData
-                readonly property bool selected: modelData.code === root.language
-                width: modelData.code === "auto" ? langChips.cell * 2 + langChips.spacing : langChips.cell
-                height: Style.space(28); radius: Style.space(8)
-                color: root.alphaOf(root.fg, lchipMouse.containsMouse ? 0.1 : 0.05)
-                border.width: selected ? 2 : 1
-                border.color: selected ? root.accent : root.alphaOf(root.fg, 0.14)
-                Text {
-                  anchors.centerIn: parent
-                  text: lchip.modelData.name
-                  color: root.fg
-                  opacity: lchip.selected ? 1 : 0.75
-                  font.family: root.family; font.pixelSize: Style.font.caption
-                  font.weight: lchip.selected ? Font.DemiBold : Font.Normal
-                }
-                MouseArea {
-                  id: lchipMouse
-                  anchors.fill: parent
-                  hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                  enabled: !root.busy
-                  onClicked: root.chooseLanguage(lchip.modelData.code)
-                }
-              }
-            }
-          }
+
+        // ---------- Footer: preview and model ----------
+        Button {
+          visible: root.page === "settings"
+          text: "Preview pill"
+          foreground: root.fg
+          fontFamily: root.family
+          bordered: true
+          hasCursor: root.cursor === 5
+          enabled: root.service === "active" && root.daemon === "idle"
+          onClicked: root.preview()
+          onHovered: function(h) { if (h) root.cursor = 5 }
         }
 
-        // ---------- Speech model: three sizes of the same engine ----------
-        Column {
-          width: parent.width
-          spacing: Style.space(8)
-          Column {
-            width: parent.width
-            spacing: Style.space(2)
-            Text { text: "Speech model"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body }
-            Text {
-              width: parent.width; wrapMode: Text.WordWrap
-              text: root.download && root.download.phase === "failed" ? "Download failed · " + (root.download.error || "try again")
-                : root.speechModel === "" && root.model ? root.model.replace(/^ggml-/, "").replace(/\.bin$/, "") + " · set in Voxtype"
-                : root.speechModel === "parakeet" ? "Parakeet · fast on the CPU; vocabulary hints don't apply, fixes do"
-                : "Accurate is best with names and code; Fast is lightest. Others download once."
-              color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
-            }
-          }
-          Row {
-            id: modelChips
-            width: parent.width
-            spacing: Style.space(6)
-            readonly property real cell: Math.floor((width - (root.models.length - 1) * spacing) / Math.max(1, root.models.length))
-            Repeater {
-              model: root.models
-              delegate: Rectangle {
-                id: mchip
-                required property var modelData
-                readonly property bool selected: modelData.id === root.speechModel
-                readonly property bool fetching: !!(root.download && root.download.id === modelData.id && root.download.phase !== "failed")
-                width: modelChips.cell; height: Style.space(42); radius: Style.space(8)
-                color: root.alphaOf(root.fg, mchipMouse.containsMouse ? 0.1 : 0.05)
-                border.width: selected ? 2 : 1
-                border.color: selected ? root.accent : root.alphaOf(root.fg, 0.14)
-                Column {
-                  anchors.centerIn: parent
-                  spacing: Style.space(1)
-                  Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: mchip.modelData.name
-                    color: root.fg
-                    opacity: mchip.selected ? 1 : 0.8
-                    font.family: root.family; font.pixelSize: Style.font.caption
-                    font.weight: mchip.selected ? Font.DemiBold : Font.Normal
-                  }
-                  Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: mchip.fetching ? (root.download.phase === "verifying" ? "Verifying…" : Math.round((root.download.progress || 0) * 100) + "% · cancel")
-                      : mchip.selected ? "In use"
-                      : mchip.modelData.downloaded ? "Ready"
-                      : mchip.modelData.sizeMB + " MB"
-                    color: root.fg
-                    opacity: 0.5
-                    font.family: root.family; font.pixelSize: Style.font.caption - 1
-                  }
-                }
-                MouseArea {
-                  id: mchipMouse
-                  anchors.fill: parent
-                  hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                  enabled: root.loaded && !root.busy
-                  onClicked: mchip.fetching ? root.cancelDownload() : root.chooseModel(mchip.modelData.id)
-                }
-              }
-            }
-          }
+        Text {
+          visible: (root.page === "settings") && (root.setUp)
+          text: "Remove Softly's setup from this machine"
+          color: root.fg
+          opacity: removeMouse.containsMouse ? 0.9 : 0.45
+          font.family: root.family
+          font.pixelSize: Style.font.caption
+          MouseArea { id: removeMouse; anchors.fill: parent; anchors.margins: -Style.space(4); hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.removeSetup() }
         }
-
-        PanelSeparator { foreground: root.fg }
-
-        // ---------- Recent dictations (runtime only; gone at logout) ----------
-        Column {
-          width: parent.width
-          spacing: Style.space(8)
-          Item {
-            width: parent.width
-            height: recentHead.implicitHeight
-            Text {
-              id: recentHead
-              text: "RECENT"
-              color: root.fg
-              opacity: 0.6
-              font.family: root.family
-              font.pixelSize: Style.font.caption
-              font.weight: Font.DemiBold
-            }
-            Text {
-              anchors.right: parent.right
-              visible: root.recent.length > 0
-              text: "Clear"
-              color: root.fg
-              opacity: clearMouse.containsMouse ? 0.9 : 0.5
-              font.family: root.family
-              font.pixelSize: Style.font.caption
-              MouseArea { id: clearMouse; anchors.fill: parent; anchors.margins: -Style.space(4); hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.clearRecent() }
-            }
-          }
-          Text {
-            visible: root.loaded && root.recent.length === 0
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: "Nothing dictated yet this session. The last few transcripts show here so you can copy them again."
-            color: root.fg
-            opacity: 0.6
-            font.family: root.family
-            font.pixelSize: Style.font.caption
-          }
-          Repeater {
-            model: root.recent
-            delegate: Item {
-              required property var modelData
-              required property int index
-              width: content.width
-              height: entry.implicitHeight + Style.space(index === 0 ? 10 : 6)
-              Column {
-                id: entry
-                anchors.left: parent.left
-                anchors.right: copyButton.left
-                anchors.rightMargin: Style.space(8)
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: Style.space(2)
-                Text {
-                  width: parent.width
-                  text: modelData.text
-                  color: root.fg
-                  opacity: index === 0 ? 1 : 0.8
-                  wrapMode: index === 0 ? Text.WordWrap : Text.NoWrap
-                  elide: Text.ElideRight
-                  maximumLineCount: index === 0 ? 4 : 1
-                  font.family: root.family
-                  font.pixelSize: index === 0 ? Style.font.body : Style.font.caption
-                }
-                Text {
-                  visible: index === 0
-                  text: root.ago(modelData.at)
-                  color: root.fg
-                  opacity: 0.5
-                  font.family: root.family
-                  font.pixelSize: Style.font.caption
-                }
-              }
-              PanelActionButton {
-                id: copyButton
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                iconText: "󰆏"
-                tooltipText: "Copy"
-                foreground: root.fg
-                fontFamily: root.family
-                fontSize: Style.font.caption
-                onClicked: root.copyText(modelData.text)
-              }
-            }
-          }
-        }
-
-        PanelSeparator { foreground: root.fg }
 
         // ---------- Vocabulary ----------
         Column {
+          visible: root.page === "words"
           width: parent.width
           spacing: Style.space(3)
           Text {
@@ -873,7 +992,9 @@ Panel {
             font.pixelSize: Style.font.caption
           }
         }
+
         Row {
+          visible: root.page === "words"
           width: parent.width
           spacing: Style.space(8)
           TextField {
@@ -900,43 +1021,36 @@ Panel {
             onClicked: root.addWord()
           }
         }
-        Column {
+
+        // Vocabulary as chips; × removes one.
+        Flow {
+          visible: root.page === "words" && root.vocabulary.length > 0
           width: parent.width
-          spacing: 0
+          spacing: Style.space(6)
           Repeater {
-          model: root.vocabulary
-          delegate: Item {
-            required property string modelData
-            required property int index
-            width: content.width
-            height: Style.space(20)
-            Text {
-              anchors.left: parent.left
-              anchors.verticalCenter: parent.verticalCenter
-              text: parent.modelData
-              color: root.fg
-              font.family: root.family
-              font.pixelSize: Style.font.body
-              font.weight: root.cursor === root.wordRow0 + parent.index ? Font.DemiBold : Font.Normal
+            model: root.vocabulary
+            delegate: Rectangle {
+              id: chip
+              required property string modelData
+              width: chipRow.implicitWidth + Style.space(18); height: Style.space(26); radius: height / 2
+              color: root.alphaOf(root.fg, chipX.containsMouse ? 0.12 : 0.07)
+              Row {
+                id: chipRow
+                anchors.centerIn: parent
+                spacing: Style.space(6)
+                Text { text: chip.modelData; color: root.fg; font.family: root.family; font.pixelSize: Style.font.caption + 1; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                  text: "×"; color: root.fg; opacity: chipX.containsMouse ? 0.9 : 0.45
+                  font.family: root.family; font.pixelSize: Style.font.caption + 1; anchors.verticalCenter: parent.verticalCenter
+                  MouseArea { id: chipX; anchors.fill: parent; anchors.margins: -Style.space(5); hoverEnabled: true; cursorShape: Qt.PointingHandCursor; enabled: !root.busy; onClicked: root.removeWord(chip.modelData) }
+                }
+              }
             }
-            PanelActionButton {
-              anchors.right: parent.right
-              anchors.verticalCenter: parent.verticalCenter
-              iconText: "󰅖"
-              tooltipText: "Remove"
-              foreground: root.fg
-              fontFamily: root.family
-              fontSize: Style.font.caption
-              hasCursor: root.cursor === root.wordRow0 + parent.index
-              enabled: !root.busy
-              onClicked: root.removeWord(parent.modelData)
-              onHovered: function(h) { if (h) root.cursor = root.wordRow0 + parent.index }
-            }
-          }
           }
         }
+
         Text {
-          visible: root.loaded && root.vocabulary.length === 0
+          visible: (root.page === "words") && (root.loaded && root.vocabulary.length === 0)
           text: "No words yet. Softly uses its defaults."
           color: root.fg
           opacity: 0.6
@@ -944,10 +1058,13 @@ Panel {
           font.pixelSize: Style.font.caption
         }
 
-        PanelSeparator { foreground: root.fg }
+
+        PanelSeparator { visible: root.page === "words"; foreground: root.fg }
+
 
         // ---------- Fixes: "when Softly hears this, type that" ----------
         Column {
+          visible: root.page === "words"
           width: parent.width
           spacing: Style.space(3)
           Text {
@@ -968,7 +1085,9 @@ Panel {
             font.pixelSize: Style.font.caption
           }
         }
+
         Row {
+          visible: root.page === "words"
           width: parent.width
           spacing: Style.space(6)
           TextField {
@@ -1011,7 +1130,9 @@ Panel {
             onClicked: root.addFix()
           }
         }
+
         Column {
+          visible: root.page === "words"
           width: parent.width
           spacing: 0
           Repeater {
@@ -1046,8 +1167,9 @@ Panel {
             }
           }
         }
+
         Text {
-          visible: root.loaded && root.fixes.length === 0
+          visible: (root.page === "words") && (root.loaded && root.fixes.length === 0)
           text: "No fixes yet."
           color: root.fg
           opacity: 0.6
@@ -1055,59 +1177,7 @@ Panel {
           font.pixelSize: Style.font.caption
         }
 
-        PanelSeparator { foreground: root.fg }
 
-        // ---------- Footer: preview and model ----------
-        Button {
-          text: "Preview pill"
-          foreground: root.fg
-          fontFamily: root.family
-          bordered: true
-          hasCursor: root.cursor === 5
-          enabled: root.service === "active" && root.daemon === "idle"
-          onClicked: root.preview()
-          onHovered: function(h) { if (h) root.cursor = 5 }
-        }
-        Item {
-          width: parent.width
-          height: Math.max(versionText.implicitHeight, updateButton.implicitHeight)
-          Text {
-            id: versionText
-            anchors.left: parent.left
-            anchors.right: updateButton.left
-            anchors.rightMargin: Style.space(8)
-            anchors.verticalCenter: parent.verticalCenter
-            elide: Text.ElideRight
-            text: "Softly " + root.version + (root.model ? " · " + root.model.replace(/^ggml-/, "").replace(/\.bin$/, "") + " · local" : "")
-                  + (root.update && root.update.error ? " · " + root.update.error : "")
-            color: root.fg
-            opacity: 0.6
-            font.family: root.family
-            font.pixelSize: Style.font.caption
-          }
-          Button {
-            id: updateButton
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.updateLabel
-            foreground: root.fg
-            fontFamily: root.family
-            fontSize: Style.font.caption
-            bordered: true
-            active: !!(root.update && root.update.available)
-            enabled: !root.checkingUpdate && !root.busy
-            onClicked: root.update && root.update.available ? root.installUpdate() : root.checkUpdate()
-          }
-        }
-        Text {
-          visible: root.setUp
-          text: "Remove Softly's setup from this machine"
-          color: root.fg
-          opacity: removeMouse.containsMouse ? 0.9 : 0.45
-          font.family: root.family
-          font.pixelSize: Style.font.caption
-          MouseArea { id: removeMouse; anchors.fill: parent; anchors.margins: -Style.space(4); hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.removeSetup() }
-        }
         Text {
           visible: root.message.length > 0
           width: parent.width
@@ -1118,9 +1188,32 @@ Panel {
           font.family: root.family
           font.pixelSize: Style.font.caption
         }
+
       }
       }
     }
+
+  // A row that opens a sub-page: title on the left, a count or summary and › on the right.
+  component LinkRow: Item {
+    id: link
+    property string title: ""
+    property string detail: ""
+    signal clicked()
+    height: Style.space(40)
+    Rectangle { width: parent.width; height: 1; color: root.alphaOf(root.fg, 0.12) }
+    Text {
+      anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+      text: link.title
+      color: root.fg; font.family: root.family; font.pixelSize: Style.font.body
+    }
+    Text {
+      anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+      text: link.detail + "  ›"
+      color: root.fg; opacity: linkMouse.containsMouse ? 0.9 : 0.55
+      font.family: root.family; font.pixelSize: Style.font.caption
+    }
+    MouseArea { id: linkMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: link.clicked() }
+  }
 
   component Switch: Rectangle {
     id: sw
