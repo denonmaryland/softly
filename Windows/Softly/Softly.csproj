@@ -21,6 +21,8 @@
     <PackageReference Include="Whisper.net.Runtime" Version="1.7.4" />
     <PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.7.4" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <!-- Parakeet on the CPU; 1.13.8 (2026-09-11), before the 2.0 line. -->
+    <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.8" />
   </ItemGroup>
   <ItemGroup>
     <!-- WinForms is only here for the tray icon; keep its types out of the global usings. -->

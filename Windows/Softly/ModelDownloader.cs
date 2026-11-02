@@ -45,52 +45,59 @@ public sealed class ModelDownloader
         int gen = ++generation;
         Model = model;
         Set(gen, Phase.Downloading, 0);
-        var target = model.File; // the file for the current language
-        var part = target.FilePath + ".part";
+        var files = model.Files.Where(f => !File.Exists(f.FilePath)).ToArray(); // for the current language
+        double totalMB = Math.Max(1, files.Sum(f => f.SizeMB)), doneMB = 0;
+        string part = "";
         try
         {
-            Directory.CreateDirectory(Settings.ModelDirectory);
-            using var response = await Http.GetAsync(target.Url, HttpCompletionOption.ResponseHeadersRead, token);
-            response.EnsureSuccessStatusCode();
-            long total = response.Content.Headers.ContentLength ?? 0, done = 0;
-            int lastStep = -1;
-            await using (var source = await response.Content.ReadAsStreamAsync(token))
-            await using (var file = File.Create(part))
+            foreach (var target in files)
             {
-                var buffer = new byte[1 << 16];
-                int n;
-                while ((n = await source.ReadAsync(buffer, token)) > 0)
+                part = target.FilePath + ".part";
+                Directory.CreateDirectory(Path.GetDirectoryName(target.FilePath)!);
+                using var response = await Http.GetAsync(target.Url, HttpCompletionOption.ResponseHeadersRead, token);
+                response.EnsureSuccessStatusCode();
+                long total = response.Content.Headers.ContentLength ?? 0, done = 0;
+                int lastStep = -1;
+                await using (var source = await response.Content.ReadAsStreamAsync(token))
+                await using (var file = File.Create(part))
                 {
-                    await file.WriteAsync(buffer.AsMemory(0, n), token);
-                    done += n;
-                    if (total <= 0) continue;
-                    double progress = (double)done / total;
-                    int step = (int)(progress * 200);
-                    if (step != lastStep) { lastStep = step; Set(gen, Phase.Downloading, progress); }
+                    var buffer = new byte[1 << 16];
+                    int n;
+                    while ((n = await source.ReadAsync(buffer, token)) > 0)
+                    {
+                        await file.WriteAsync(buffer.AsMemory(0, n), token);
+                        done += n;
+                        if (total <= 0) continue;
+                        // Overall progress, weighted by each file's size.
+                        double progress = (doneMB + target.SizeMB * (double)done / total) / totalMB;
+                        int step = (int)(progress * 200);
+                        if (step != lastStep) { lastStep = step; Set(gen, Phase.Downloading, Math.Min(progress, 1)); }
+                    }
                 }
+                Set(gen, Phase.Verifying, 1);
+                string hash = await Task.Run(() =>
+                {
+                    using var stream = File.OpenRead(part);
+                    return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+                }, token);
+                if (hash != target.Sha256)
+                {
+                    TryDelete(part);
+                    Set(gen, Phase.Failed, 0, "The download did not verify. Try again.");
+                    return;
+                }
+                File.Move(part, target.FilePath, overwrite: true);
+                doneMB += target.SizeMB;
             }
-            Set(gen, Phase.Verifying, 1);
-            string hash = await Task.Run(() =>
-            {
-                using var stream = File.OpenRead(part);
-                return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-            }, token);
-            if (hash != target.Sha256)
-            {
-                TryDelete(part);
-                Set(gen, Phase.Failed, 0, "The download did not verify. Try again.");
-                return;
-            }
-            File.Move(part, target.FilePath, overwrite: true);
             Set(gen, Phase.Idle, 0, done: model);
         }
         catch (OperationCanceledException)
         {
-            TryDelete(part);
+            if (part.Length > 0) TryDelete(part);
         }
         catch (Exception e)
         {
-            TryDelete(part);
+            if (part.Length > 0) TryDelete(part);
             Set(gen, Phase.Failed, 0, e.Message);
         }
     }

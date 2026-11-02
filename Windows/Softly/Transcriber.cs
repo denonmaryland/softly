@@ -9,7 +9,7 @@ namespace Softly;
 /// stays loaded so each dictation only pays for inference. Vulkan is used
 /// when the GPU driver supports it, otherwise the CPU build.
 /// </summary>
-public sealed class Transcriber : IDisposable
+public sealed class Transcriber : ISpeechBackend, IDisposable
 {
     public enum Status { Loading, Ready, MissingModel, Failed }
 
@@ -77,6 +77,13 @@ public sealed class Transcriber : IDisposable
         {
             gate.Release();
         }
+    }
+
+    public void Unload()
+    {
+        gate.Wait();
+        try { factory?.Dispose(); factory = null; }
+        finally { gate.Release(); }
     }
 
     public void Dispose()

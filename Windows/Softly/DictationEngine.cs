@@ -26,7 +26,10 @@ public sealed class DictationEngine
 
     private readonly GestureController controller = new();
     private readonly AudioRecorder recorder = new();
-    private readonly Transcriber transcriber = new();
+    private readonly Transcriber whisper = new();
+    private readonly ParakeetTranscriber parakeet = new();
+    /// <summary>The engine the current speech model uses; set by LoadModel.</summary>
+    private ISpeechBackend transcriber;
     private readonly Dispatcher dispatcher;
     private DispatcherTimer? capTimer;
     /// <summary>
@@ -43,6 +46,7 @@ public sealed class DictationEngine
     {
         Pill = pill;
         this.dispatcher = dispatcher;
+        transcriber = SpeechModel.Current.Engine == SpeechEngine.Parakeet ? parakeet : whisper;
         pill.LevelSource = () => recorder.CurrentRMS;
         pill.OnCancelClick = CancelNow;
         // Input device changed mid-recording: keep what was captured and transcribe it.
@@ -53,6 +57,9 @@ public sealed class DictationEngine
     {
         ModelStatus = Transcriber.Status.Loading;
         OnStatusChange();
+        ISpeechBackend next = SpeechModel.Current.Engine == SpeechEngine.Parakeet ? parakeet : whisper;
+        if (next != transcriber) transcriber.Unload();
+        transcriber = next;
         var status = await transcriber.LoadAsync(Settings.ModelPath);
         ModelStatus = status;
         OnStatusChange();
