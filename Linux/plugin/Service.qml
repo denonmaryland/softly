@@ -14,7 +14,6 @@ Item {
     property string displayState: "recording"
     property bool locked: false
     property bool held: false
-    property bool waiting: false
     property bool showing: false
     property var selectedScreen: Quickshell.screens[0]
     property var commands: []
@@ -131,12 +130,7 @@ Item {
         const actions = controller.send(event, Date.now(), daemon)
         locked = controller.locked
         held = controller.held
-        waiting = controller.waiting
-        for (let action of actions) {
-            if (action === "timer-start") releaseTimer.restart()
-            else if (action === "timer-stop") releaseTimer.stop()
-            else { commands = commands.concat([action]); nextCommand() }
-        }
+        for (let action of actions) { commands = commands.concat([action]); nextCommand() }
     }
     function nextCommand() {
         if (worker.running || !commands.length) return
@@ -166,7 +160,6 @@ Item {
             Qt.callLater(root.nextCommand)
         }
     }
-    Timer { id: releaseTimer; interval: 330; onTriggered: root.handle("timeout") }
     FileView {
         path: root.runtime + "/state"
         watchChanges: true

@@ -16,7 +16,7 @@ struct PreferencesView: View {
                 .padding(.top, 10)
 
             VStack(spacing: 0) {
-                PreferenceRow(title: "Dictation shortcut", subtitle: "Hold to record · double-tap for hands-free") {
+                PreferenceRow(title: "Dictation shortcut", subtitle: "Tap to start and stop · hold to talk") {
                     Keycap(label: "Right ⌥")
                 }
                 PreferenceRow(title: "Play sounds", subtitle: "A subtle cue when recording starts and ends") {

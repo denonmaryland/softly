@@ -3,7 +3,7 @@
 <img src="docs/wordmark.svg" alt="Softly" width="560">
 
 <p><strong>Local Whisper dictation for Omarchy, with a pill that stays out of your way.</strong><br>
-Hold a key, speak, release, and the words land where your cursor is. Nothing leaves the machine.</p>
+Tap a key, speak, tap again, and the words land where your cursor is. Nothing leaves the machine.</p>
 
 <p>
 <a href="https://github.com/denonmaryland/omarchy-softly/releases"><img alt="Release" src="https://img.shields.io/github/v/release/denonmaryland/omarchy-softly?style=flat-square&label=release&color=4C8DFF"></a>
@@ -13,7 +13,7 @@ Hold a key, speak, release, and the words land where your cursor is. Nothing lea
 <a href="https://github.com/denonmaryland/softly"><img alt="Also on macOS and Windows" src="https://img.shields.io/badge/also%20on-macOS%20%C2%B7%20Windows-1E2330?style=flat-square"></a>
 </p>
 
-<img src="docs/demo-dictation.gif" alt="Hold F9 and speak: the pill appears, the words land in Obsidian; a double-tap dictates hands-free into another note; the popover shows what was just said" width="880">
+<img src="docs/demo-dictation.gif" alt="Hold F9 and speak: the pill appears, the words land in Obsidian; a tap dictates hands-free into another note; the popover shows what was just said" width="880">
 
 </div>
 
@@ -21,8 +21,8 @@ Hold a key, speak, release, and the words land where your cursor is. Nothing lea
 
 <table align="center">
 <tr>
-<td align="center" width="33%"><h3>Hold</h3>Press and hold <kbd>F9</kbd>. The pill rises from the bottom of the screen with a live waveform and a timer.</td>
-<td align="center" width="33%"><h3>Speak</h3>Say it however it comes. Double-tap instead of holding and Softly keeps listening hands-free until you press again.</td>
+<td align="center" width="33%"><h3>Tap</h3>Tap <kbd>F9</kbd>. The pill rises from the bottom of the screen with a live waveform and a timer.</td>
+<td align="center" width="33%"><h3>Speak</h3>Say it however it comes. One tap and Softly keeps listening hands-free until you tap again; hold the key instead for push-to-talk.</td>
 <td align="center" width="33%"><h3>Release</h3>Whisper runs on this machine, the groove dims while it works, and the text is pasted into the app you were in.</td>
 </tr>
 </table>
@@ -33,7 +33,7 @@ Hold a key, speak, release, and the words land where your cursor is. Nothing lea
 
 <table>
 <tr>
-<td width="50%" valign="top"><strong>A pill, not a panel.</strong><br>One small capsule with a backlit groove. It appears when you hold the key and leaves when the words have landed. Esc or the × cancels.</td>
+<td width="50%" valign="top"><strong>A pill, not a panel.</strong><br>One small capsule with a backlit groove. It appears when you press the key and leaves when the words have landed. Esc or the × cancels.</td>
 <td width="50%" valign="top"><strong>Private by construction.</strong><br>Voxtype's Whisper model runs on your GPU or CPU. Audio stays in memory, the transcript stays on your clipboard, and the plugin never phones home except when you ask it to check for updates.</td>
 </tr>
 <tr>

@@ -1,7 +1,7 @@
 # Softly for Windows
 
-The same app as the Mac and Linux versions: hold **Right Alt** to dictate,
-release to transcribe and paste; double-tap for hands-free; Esc or the ×
+The same app as the Mac and Linux versions: tap **Right Alt** to start dictating
+and tap it again to transcribe and paste, or hold it and release; Esc or the ×
 cancels. Local Whisper (whisper.cpp through Whisper.net) on the GPU via
 Vulkan when the driver allows it, otherwise CPU. Nothing leaves the PC.
 

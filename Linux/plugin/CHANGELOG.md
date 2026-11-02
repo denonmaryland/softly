@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4
+
+- One tap starts hands-free dictation and the next tap finishes it; no
+  more double-tap. Holding the key for half a second or longer still
+  works as push-to-talk and finishes on release.
+
 ## 0.2.3
 
 - No plugin changes; the version follows the Windows app, which now

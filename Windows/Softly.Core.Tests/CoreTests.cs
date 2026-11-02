@@ -20,26 +20,23 @@ public class GestureControllerTests
     }
 
     [Fact]
-    public void DoubleTapLatchesThenPressFinishes()
+    public void TapLatchesThenTapFinishes()
     {
         var c = new GestureController();
-        c.Send(E.Press, 0, S.Idle);
-        Eq(new[] { A.TimerStart }, c.Send(E.Release, 0.08, S.Recording));
-        Eq(new[] { A.TimerStop }, c.Send(E.Press, 0.18, S.Recording));
+        Eq(new[] { A.Start }, c.Send(E.Press, 0, S.Idle));
+        Eq(Array.Empty<GestureAction>(), c.Send(E.Release, 0.08, S.Recording));
         Assert.True(c.Locked);
-        Eq(Array.Empty<GestureAction>(), c.Send(E.Release, 0.24, S.Recording));
-        Eq(Array.Empty<GestureAction>(), c.Send(E.Timeout, 0.5, S.Recording));
-        Eq(new[] { A.TimerStop, A.Stop }, c.Send(E.Press, 2, S.Recording));
+        Eq(new[] { A.Stop }, c.Send(E.Press, 2, S.Recording));
         Eq(Array.Empty<GestureAction>(), c.Send(E.Release, 2.1, S.Transcribing));
     }
 
     [Fact]
-    public void SingleTapStopsAfterTimeout()
+    public void SlowTapStillLatches()
     {
         var c = new GestureController();
         c.Send(E.Press, 0, S.Idle);
-        c.Send(E.Release, 0.08, S.Recording);
-        Eq(new[] { A.Stop }, c.Send(E.Timeout, 0.41, S.Recording));
+        Eq(Array.Empty<GestureAction>(), c.Send(E.Release, 0.45, S.Recording));
+        Assert.True(c.Locked);
     }
 
     [Fact]
@@ -63,7 +60,7 @@ public class GestureControllerTests
     public void ExternalRecordingIsStopped()
     {
         var c = new GestureController();
-        Eq(new[] { A.TimerStop, A.Stop }, c.Send(E.Press, 0, S.Recording));
+        Eq(new[] { A.Stop }, c.Send(E.Press, 0, S.Recording));
         Eq(Array.Empty<GestureAction>(), c.Send(E.Release, 0.08, S.Idle));
     }
 
@@ -73,7 +70,7 @@ public class GestureControllerTests
         var c = new GestureController();
         Eq(new[] { A.Start }, c.Send(E.Toggle, 0, S.Idle));
         Assert.True(c.Locked);
-        Eq(new[] { A.TimerStop, A.Stop }, c.Send(E.Toggle, 1, S.Recording));
+        Eq(new[] { A.Stop }, c.Send(E.Toggle, 1, S.Recording));
     }
 
     [Fact]
@@ -82,8 +79,8 @@ public class GestureControllerTests
         var c = new GestureController();
         c.Send(E.Press, 0, S.Idle);
         c.Send(E.Release, 0.08, S.Recording);
-        Eq(new[] { A.TimerStop, A.Cancel }, c.Send(E.Cancel, 0.1, S.Recording));
-        Eq(Array.Empty<GestureAction>(), c.Send(E.Timeout, 0.41, S.Idle));
+        Eq(new[] { A.Cancel }, c.Send(E.Cancel, 0.1, S.Recording));
+        Eq(new[] { A.Start }, c.Send(E.Press, 1, S.Idle));
     }
 }
 

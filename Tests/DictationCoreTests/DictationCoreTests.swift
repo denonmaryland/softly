@@ -10,23 +10,20 @@ final class GestureControllerTests: XCTestCase {
         XCTAssertEqual(c.send(.release, now: 1, state: .recording), [.stop])
     }
 
-    func testDoubleTapLatchesThenPressFinishes() {
+    func testTapLatchesThenTapFinishes() {
         var c = GestureController()
-        _ = c.send(.press, now: 0, state: .idle)
-        XCTAssertEqual(c.send(.release, now: 0.08, state: .recording), [.timerStart])
-        XCTAssertEqual(c.send(.press, now: 0.18, state: .recording), [.timerStop])
+        XCTAssertEqual(c.send(.press, now: 0, state: .idle), [.start])
+        XCTAssertEqual(c.send(.release, now: 0.08, state: .recording), [])
         XCTAssertTrue(c.locked)
-        XCTAssertEqual(c.send(.release, now: 0.24, state: .recording), [])
-        XCTAssertEqual(c.send(.timeout, now: 0.5, state: .recording), [])
-        XCTAssertEqual(c.send(.press, now: 2, state: .recording), [.timerStop, .stop])
+        XCTAssertEqual(c.send(.press, now: 2, state: .recording), [.stop])
         XCTAssertEqual(c.send(.release, now: 2.1, state: .transcribing), [])
     }
 
-    func testSingleTapStopsAfterTimeout() {
+    func testSlowTapStillLatches() {
         var c = GestureController()
         _ = c.send(.press, now: 0, state: .idle)
-        _ = c.send(.release, now: 0.08, state: .recording)
-        XCTAssertEqual(c.send(.timeout, now: 0.41, state: .recording), [.stop])
+        XCTAssertEqual(c.send(.release, now: 0.45, state: .recording), [])
+        XCTAssertTrue(c.locked)
     }
 
     func testResetWhileHeldIgnoresRelease() {
@@ -44,7 +41,7 @@ final class GestureControllerTests: XCTestCase {
 
     func testExternalRecordingIsStopped() {
         var c = GestureController()
-        XCTAssertEqual(c.send(.press, now: 0, state: .recording), [.timerStop, .stop])
+        XCTAssertEqual(c.send(.press, now: 0, state: .recording), [.stop])
         XCTAssertEqual(c.send(.release, now: 0.08, state: .idle), [])
     }
 
@@ -52,15 +49,15 @@ final class GestureControllerTests: XCTestCase {
         var c = GestureController()
         XCTAssertEqual(c.send(.toggle, now: 0, state: .idle), [.start])
         XCTAssertTrue(c.locked)
-        XCTAssertEqual(c.send(.toggle, now: 1, state: .recording), [.timerStop, .stop])
+        XCTAssertEqual(c.send(.toggle, now: 1, state: .recording), [.stop])
     }
 
     func testCancel() {
         var c = GestureController()
         _ = c.send(.press, now: 0, state: .idle)
         _ = c.send(.release, now: 0.08, state: .recording)
-        XCTAssertEqual(c.send(.cancel, now: 0.1, state: .recording), [.timerStop, .cancel])
-        XCTAssertEqual(c.send(.timeout, now: 0.41, state: .idle), [])
+        XCTAssertEqual(c.send(.cancel, now: 0.1, state: .recording), [.cancel])
+        XCTAssertEqual(c.send(.press, now: 1, state: .idle), [.start], "a fresh start after cancel")
     }
 }
 

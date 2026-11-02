@@ -2,7 +2,7 @@ import AppKit
 import DictationCore
 
 /// Recording lifecycle, matching the Linux plugin:
-/// press/hold/double-tap → record → transcribe → paste → ✓ → close.
+/// tap/hold → record → transcribe → paste → ✓ → close.
 /// Esc or clicking × cancels and discards at any point.
 @MainActor
 final class DictationEngine {
@@ -14,7 +14,6 @@ final class DictationEngine {
     private var controller = GestureController()
     private let recorder = AudioRecorder()
     private let transcriber = Transcriber()
-    private var releaseTimer: Timer?
     private var capTimer: Timer?
     /// Bumped on every start/cancel so stale timers and results are ignored.
     private var session = 0
@@ -85,12 +84,6 @@ final class DictationEngine {
         let actions = controller.send(event, now: PillModel.now, state: state)
         for action in actions {
             switch action {
-            case .timerStart:
-                releaseTimer?.invalidate()
-                releaseTimer = scheduled(GestureController.doubleTapWindow) { [weak self] in self?.handle(.timeout) }
-            case .timerStop:
-                releaseTimer?.invalidate()
-                releaseTimer = nil
             case .start:
                 startRecording()
             case .stop:

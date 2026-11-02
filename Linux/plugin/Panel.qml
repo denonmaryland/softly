@@ -49,7 +49,7 @@ Panel {
     : service !== "active" ? "Voxtype is not running"
     : daemon === "recording" || daemon === "streaming" ? "Recording…"
     : daemon === "transcribing" ? "Transcribing…"
-    : daemon === "idle" ? "Ready · hold " + hotkey + ", or double-tap for hands-free" : "Starting…"
+    : daemon === "idle" ? "Ready · tap " + hotkey + " to start, tap again to finish" : "Starting…"
 
   function alphaOf(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
   function refresh() { if (!busy) readProc.running = true }

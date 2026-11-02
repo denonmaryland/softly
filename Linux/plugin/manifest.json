@@ -4,7 +4,7 @@
   "name": "Softly",
   "version": "0.2.3",
   "author": "denonmaryland",
-  "description": "Hold a key, speak, release: local Whisper dictation through Voxtype with a quiet backlit pill, plus a bar popover for sounds, vocabulary, recent transcripts and status.",
+  "description": "Tap a key, speak, tap again: local Whisper dictation through Voxtype with a quiet backlit pill, plus a bar popover for sounds, vocabulary, recent transcripts and status.",
   "kinds": [
     "service",
     "bar-widget"

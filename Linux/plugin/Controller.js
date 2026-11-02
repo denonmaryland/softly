@@ -1,60 +1,58 @@
-// Pure key gesture state machine; the QML adapter owns timers and processes.
+// Pure key gesture state machine; the QML adapter owns processes.
+//  Tap the key  -> start hands-free; tap again to finish.
+//  Hold the key -> record while held, transcribe on release.
+var HOLD_MS = 500;
+
 function createController() {
     return {
-        held: false, locked: false, owned: false, waiting: false,
-        ignoreRelease: false, pressedAt: 0, releasedAt: 0,
+        held: false, locked: false, owned: false,
+        ignoreRelease: false, pressedAt: 0,
         send: function(event, now, daemon) {
-            var out = [];
+            var recording = daemon === "recording" || daemon === "streaming";
             if (event === "reset") {
-                this.locked = this.owned = this.waiting = false;
+                this.locked = this.owned = false;
                 this.ignoreRelease = this.held;
-                out.push("timer-stop");
-            } else if (event === "stop" || event === "cancel") {
-                this.locked = this.owned = this.waiting = false;
+                return [];
+            }
+            if (event === "stop" || event === "cancel") {
+                this.locked = this.owned = false;
                 this.ignoreRelease = this.held;
-                out.push("timer-stop", event);
-            } else if (event === "toggle") {
-                if (this.owned || daemon === "recording" || daemon === "streaming") {
-                    return this.send("stop", now, daemon);
-                }
-                if (daemon !== "idle") return out;
+                return [event];
+            }
+            if (event === "toggle") {
+                if (this.owned || recording) return this.send("stop", now, daemon);
+                if (daemon !== "idle") return [];
                 this.owned = this.locked = true;
-                out.push("start");
-            } else if (event === "press") {
-                if (this.held) return out;
+                return ["start"];
+            }
+            if (event === "press") {
+                if (this.held) return [];
                 this.held = true;
                 this.pressedAt = now;
-                if (this.waiting && now - this.releasedAt <= 330) {
-                    this.waiting = false;
-                    this.locked = true;
-                    out.push("timer-stop");
-                } else if (this.locked || (!this.owned && (daemon === "recording" || daemon === "streaming"))) {
+                if (this.locked || (!this.owned && recording)) {
                     this.ignoreRelease = true;
-                    out = this.send("stop", now, daemon);
-                } else if (daemon === "idle" && !this.owned) {
+                    return this.send("stop", now, daemon);
+                }
+                if (daemon === "idle" && !this.owned) {
                     this.owned = true;
-                    out.push("start");
-                } else {
-                    this.ignoreRelease = true;
+                    return ["start"];
                 }
-            } else if (event === "release") {
-                if (!this.held) return out;
-                this.held = false;
-                if (this.ignoreRelease) { this.ignoreRelease = false; return out; }
-                if (this.locked || !this.owned) return out;
-                if (now - this.pressedAt <= 240) {
-                    this.waiting = true;
-                    this.releasedAt = now;
-                    out.push("timer-start");
-                } else {
-                    this.owned = false;
-                    out.push("stop");
-                }
-            } else if (event === "timeout" && this.waiting) {
-                this.waiting = this.owned = false;
-                out.push("stop");
+                this.ignoreRelease = true;
+                return [];
             }
-            return out;
+            if (event === "release") {
+                if (!this.held) return [];
+                this.held = false;
+                if (this.ignoreRelease) { this.ignoreRelease = false; return []; }
+                if (this.locked || !this.owned) return [];
+                if (now - this.pressedAt < HOLD_MS) {
+                    this.locked = true;
+                    return [];
+                }
+                this.owned = false;
+                return ["stop"];
+            }
+            return [];
         }
     };
 }

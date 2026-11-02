@@ -7,7 +7,7 @@ namespace Softly;
 
 /// <summary>
 /// Recording lifecycle, the same on every platform:
-/// press/hold/double-tap -> record -> transcribe -> paste -> check -> close.
+/// tap/hold -> record -> transcribe -> paste -> check -> close.
 /// Esc or clicking the x cancels and discards at any point.
 /// </summary>
 public sealed class DictationEngine
@@ -22,7 +22,7 @@ public sealed class DictationEngine
     private readonly AudioRecorder recorder = new();
     private readonly Transcriber transcriber = new();
     private readonly Dispatcher dispatcher;
-    private DispatcherTimer? releaseTimer, capTimer;
+    private DispatcherTimer? capTimer;
     /// <summary>Bumped on every start/cancel so stale timers and results are ignored.</summary>
     private int session;
 
@@ -132,14 +132,6 @@ public sealed class DictationEngine
         {
             switch (action)
             {
-                case GestureAction.TimerStart:
-                    releaseTimer?.Stop();
-                    releaseTimer = Timing.After(GestureController.DoubleTapWindow, () => Handle(GestureEvent.Timeout));
-                    break;
-                case GestureAction.TimerStop:
-                    releaseTimer?.Stop();
-                    releaseTimer = null;
-                    break;
                 case GestureAction.Start: StartRecording(); break;
                 case GestureAction.Stop: StopRecording(); break;
                 case GestureAction.Cancel: Discard(); break;

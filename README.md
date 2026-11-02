@@ -2,7 +2,7 @@
 
 <img src="docs/wordmark.svg" alt="Softly" width="560">
 
-<p><strong>Hold a key, speak, release. The words land where your cursor is.</strong><br>
+<p><strong>Tap a key, speak, tap again. The words land where your cursor is.</strong><br>
 Local Whisper dictation with the same quiet backlit pill on macOS, Windows and Omarchy Linux. Nothing leaves the machine.</p>
 
 <p>
@@ -13,7 +13,7 @@ Local Whisper dictation with the same quiet backlit pill on macOS, Windows and O
 <a href="https://github.com/denonmaryland/softly/blob/main/VERSION"><img alt="Whisper on device" src="https://img.shields.io/badge/whisper-on%20device-1E2330?style=flat-square"></a>
 </p>
 
-<img src="Linux/plugin/docs/demo-dictation.gif" alt="Hold the key and speak: the pill appears, the words land in Obsidian; a double-tap dictates hands-free; the popover shows what was just said" width="880">
+<img src="Linux/plugin/docs/demo-dictation.gif" alt="Hold the key and speak: the pill appears, the words land in Obsidian; a tap dictates hands-free; the popover shows what was just said" width="880">
 
 </div>
 
@@ -21,8 +21,8 @@ Local Whisper dictation with the same quiet backlit pill on macOS, Windows and O
 
 <table align="center">
 <tr>
-<td align="center" width="33%"><h3>Hold</h3>Right Option on the Mac, Right Alt on Windows, F9 on Omarchy. The pill rises with a live waveform and a timer.</td>
-<td align="center" width="33%"><h3>Speak</h3>Double-tap instead of holding and Softly keeps listening hands-free until you press again. Esc or the × cancels.</td>
+<td align="center" width="33%"><h3>Tap</h3>Right Option on the Mac, Right Alt on Windows, F9 on Omarchy. The pill rises with a live waveform and a timer.</td>
+<td align="center" width="33%"><h3>Speak</h3>Tap once and Softly keeps listening hands-free until you tap again, or hold the key to talk. Esc or the × cancels.</td>
 <td align="center" width="33%"><h3>Release</h3>Whisper runs on the machine, the groove dims while it works, and the text is pasted into the app you were in. It stays on the clipboard too.</td>
 </tr>
 </table>
@@ -63,7 +63,7 @@ Windows 10 or 11, 64-bit. A GPU with Vulkan makes transcription fast; without on
 1. Download `Softly-windows.zip` from the [latest release](https://github.com/denonmaryland/softly/releases/latest) and unzip it anywhere, for example `C:\Softly`.
 2. Run **Softly.exe**. The build is not code-signed, so SmartScreen shows "Windows protected your PC": press **More info**, then **Run anyway**. Nothing else needs installing; .NET is bundled.
 3. Softly opens its window. Press **Download speech model** (181 MB, once). The file is verified and kept in `%LOCALAPPDATA%\Softly\Models`.
-4. Hold **Right Alt** and talk.
+4. Tap **Right Alt**, talk, and tap it again.
 
 Softly lives in the tray, not the taskbar. It adds itself to the Start menu on first run, so search for **Softly** to open its window again; launching it while it is already running brings the window forward. The tray icon (under the ^ arrow) has the same window and updates.
 
@@ -77,8 +77,8 @@ A menu-bar dictation app for the Mac, ported from the Omarchy plugin. It uses th
 
 ### How it works
 
-- Hold **Right Option (⌥)** to dictate; release to transcribe and paste.
-- **Double-tap** Right Option for hands-free mode; press it again to finish.
+- **Tap** Right Option (⌥) once to dictate hands-free; tap it again to transcribe and paste.
+- Or hold it while you talk and release to finish.
 - **Esc**, or clicking the **×** that appears when you hover the timer,
   cancels and discards. Esc is only intercepted while the pill is showing.
 - Typing another key while holding Right Option (an Option shortcut or an
@@ -137,7 +137,7 @@ Apple Silicon, macOS 14 or later.
 
 3. Softly opens its window. Press **Download speech model** (181 MB, once). The file is verified and kept in `~/Library/Application Support/Softly/Models`.
 4. Grant **Microphone**, **Input Monitoring** and **Accessibility** when asked. Input Monitoring is for the Right Option hotkey; Accessibility is for pasting with ⌘V and intercepting Esc. The menu-bar icon shows a badge until all three are in place, and its menu links to each settings pane.
-5. Hold **Right ⌥** and talk.
+5. Tap **Right ⌥**, talk, and tap it again.
 
 Updates arrive through **Check for Updates** in the menu; the window offers the new build when one is out.
 

@@ -61,7 +61,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Hold to speak. Release to paste.")
                     .font(.system(size: 18, weight: .semibold))
-                Text("Double-tap for hands-free. Press again to finish.")
+                Text("Tap to start, tap again to finish. Or hold to talk.")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
