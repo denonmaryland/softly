@@ -89,23 +89,25 @@ final class ParakeetTranscriber: SpeechBackend, @unchecked Sendable {
         }
     }
 
+    private func waitingForBoost() -> Bool {
+        lock.withLock { boost == nil && !boostKey.isEmpty }
+    }
+
+    private func engines() -> (AsrManager?, VocabularyBoostingSession?) {
+        lock.withLock { (manager, boost) }
+    }
+
     /// Test hook for `Softly --transcribe`: waits for the boost session, then
     /// returns the transcript before and after vocabulary boosting. Written
     /// like transcribe(_:) on purpose: Swift 6.1.2 crashed compiling a
-    /// variant with `try?` and lock closures here.
+    /// variant with `try?` and lock closures inside this async function.
     func compare(_ samples: [Float]) async -> (raw: String, boosted: String?)? {
         prepareVocabulary()
         for _ in 0..<600 {
-            lock.lock()
-            let waiting = boost == nil && !boostKey.isEmpty
-            lock.unlock()
-            if !waiting { break }
+            if !waitingForBoost() { break }
             try? await Task.sleep(nanoseconds: 200_000_000)
         }
-        lock.lock()
-        let manager = self.manager
-        let boost = self.boost
-        lock.unlock()
+        let (manager, boost) = engines()
         guard let manager else { return nil }
         let audio = Transcript.padded(samples)
         do {
@@ -120,6 +122,31 @@ final class ParakeetTranscriber: SpeechBackend, @unchecked Sendable {
             return nil
         }
     }
+
+    /// 1 for the same letters and digits (ignoring case, spaces and
+    /// punctuation), falling with each edit needed to turn one into the other.
+    static func similarity(_ a: String, _ b: String) -> Double {
+        func letters(_ text: String) -> [Character] {
+            Array(text.lowercased().filter { $0.isLetter || $0.isNumber })
+        }
+        let x = letters(a), y = letters(b)
+        guard !x.isEmpty, !y.isEmpty else { return 0 }
+        var row = Array(0...y.count)
+        for i in 1...x.count {
+            var previous = row[0]
+            row[0] = i
+            for j in 1...y.count {
+                let current = row[j]
+                row[j] = min(row[j] + 1, row[j - 1] + 1, previous + (x[i - 1] == y[j - 1] ? 0 : 1))
+                previous = current
+            }
+        }
+        return 1 - Double(row[y.count]) / Double(max(x.count, y.count))
+    }
+
+    private static let smallWords: Set<String> = [
+        "a", "an", "and", "the", "for", "of", "to", "in", "on", "at", "or", "then", "with", "is", "it", "check", "open",
+    ]
 
     /// Only the word swaps the spotter is sure of, applied to Parakeet's own
     /// text with the fix-rule matcher. FluidAudio's rebuilt sentence drops
