@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- A redesigned popover. The main page holds what you reach for: status,
+  the speech model, the three switches and recent dictations. Words & fixes
+  and Key, language & pill each get their own page, so the popover no longer
+  runs past the bottom of the screen. Esc goes back a page, then closes.
+- Vocabulary shows as chips you can remove with ×.
+- The Mac and Windows apps get a new window to match: Home, Speech, Words,
+  Shortcut, Look and About, with a real microphone picker.
+
 ## 0.3.0
 
 - Pick your speech model in the popover: Fast, Balanced (the default),
