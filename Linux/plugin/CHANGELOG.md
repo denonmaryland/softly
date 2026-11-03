@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- No changes to the plugin; this version keeps it in step with the Mac and
+  Windows apps. On the Mac, Parakeet now listens for your vocabulary words.
+
 ## 0.4.0
 
 - A redesigned popover. The main page holds what you reach for: status,
