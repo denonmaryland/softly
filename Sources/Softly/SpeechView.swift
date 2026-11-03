@@ -86,7 +86,7 @@ private struct ModelRow: View {
         case "fast": return "Smallest and quickest"
         case "balanced": return "Quick, good with everyday speech"
         case "accurate": return "Best with names and code"
-        default: return "Fastest on Apple silicon · no hints"
+        default: return "Fastest on Apple silicon"
         }
     }
 

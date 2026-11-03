@@ -42,10 +42,10 @@ struct SpeechModel: Identifiable, Equatable, Sendable {
 
     /// NVIDIA Parakeet TDT v3 on the Neural Engine through FluidAudio, which
     /// downloads and keeps its own files. It detects 25 European languages by
-    /// itself and takes no vocabulary hints; fixes still apply.
+    /// itself; vocabulary goes through FluidAudio's keyword spotter instead of a prompt.
     static let parakeet: SpeechModel = {
         let files = File(name: "parakeet-tdt-0.6b-v3-coreml", sha256: "", sizeMB: 480)
-        return SpeechModel(id: "parakeet", name: "Parakeet", detail: "Very fast on the Neural Engine. 25 languages; no vocabulary hints.",
+        return SpeechModel(id: "parakeet", name: "Parakeet", detail: "Very fast on the Neural Engine. 25 languages.",
                            english: files, multilingual: files, engine: .parakeet)
     }()
 

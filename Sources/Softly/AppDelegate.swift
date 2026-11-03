@@ -57,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         updater.startBackgroundChecks()
 
+        if TranscribeCheck.runIfAsked() { return }
         if Snapshots.runIfAsked(state: state) {
             NSApp.terminate(nil)
             return

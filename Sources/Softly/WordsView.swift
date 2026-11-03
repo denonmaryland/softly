@@ -15,7 +15,7 @@ struct WordsView: View {
                        subtitle: "Names Softly should know, and fixes for what it keeps mishearing.")
 
             GallerySection(title: "Vocabulary",
-                           detail: "Hinted to the model on every dictation. Whisper models only.",
+                           detail: "Names the model should listen for on every dictation.",
                            first: true) {
                 FlowLayout(spacing: 8, lineSpacing: 8) {
                     ForEach(state.vocabulary, id: \.self) { word in
