@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2
+
+- No changes to the plugin. 0.4.1's Mac build failed on the release
+  toolchain; this version ships the same changes: on the Mac, Parakeet now
+  listens for your vocabulary words.
+
 ## 0.4.1
 
 - No changes to the plugin; this version keeps it in step with the Mac and
