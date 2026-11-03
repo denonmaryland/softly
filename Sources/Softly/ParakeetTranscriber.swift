@@ -93,7 +93,10 @@ final class ParakeetTranscriber: SpeechBackend, @unchecked Sendable {
     /// returns the transcript before and after vocabulary boosting.
     func compare(_ samples: [Float]) async -> (raw: String, boosted: String?)? {
         prepareVocabulary()
-        for _ in 0..<600 where lock.withLock({ boost == nil && !boostKey.isEmpty }) {
+        // Plain loop: Swift 6.1.2 crashes compiling a closure in a `where` clause here.
+        for _ in 0..<600 {
+            let waiting = lock.withLock { boost == nil && !boostKey.isEmpty }
+            if !waiting { break }
             try? await Task.sleep(nanoseconds: 200_000_000)
         }
         let (manager, boost) = lock.withLock { (self.manager, self.boost) }
