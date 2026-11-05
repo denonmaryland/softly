@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1
+
+- Setup and removal keep `hyprland.lua`'s own permissions when they edit it
+  (a private 0600 file stays private), and write through a private temporary
+  file. Thanks to the Omarchy plugin marketplace review.
+- Copying a recent dictation hands the text to `wl-copy` on stdin instead of
+  its command line, so other local accounts can't read it from the process
+  list.
+
 ## 0.5.0
 
 - Ready for Omarchy 4.5, which binds Alt + Space and holding Right Alt to

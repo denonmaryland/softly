@@ -32,6 +32,8 @@ so the two lists can be copied across by hand.
 import hashlib
 import json
 import os
+import tempfile
+import stat
 import signal
 import re
 import shutil
@@ -199,11 +201,26 @@ def backup(path):
 
 
 def atomic_write(path, text, mode=0o644):
-    tmp = path + ".tmp"
-    with open(tmp, "w") as f:
-        f.write(text)
-    os.chmod(tmp, mode)
-    os.replace(tmp, path)
+    """Replace path atomically. An existing file keeps its own permissions, so
+    a private (0600) hyprland.lua stays private; `mode` only applies to new
+    files. The temporary file is created private (mkstemp, 0600)."""
+    try:
+        mode = stat.S_IMODE(os.stat(path).st_mode)
+    except FileNotFoundError:
+        pass
+    fd, tmp = tempfile.mkstemp(prefix="." + os.path.basename(path) + ".", suffix=".tmp",
+                               dir=os.path.dirname(path) or ".")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def read_text(path):

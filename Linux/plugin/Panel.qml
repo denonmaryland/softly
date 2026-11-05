@@ -219,7 +219,14 @@ Panel {
   }
   function removeFix(heard) { message = ""; send(["fix-remove", heard]) }
   function preview() { Quickshell.execDetached(["omarchy-shell", "io.github.denonmaryland.softly", "preview"]) }
-  function copyText(t) { Quickshell.execDetached(["wl-copy", "--", t]); message = "Copied" }
+  // The text goes to wl-copy on stdin, never on its command line, where other
+  // local accounts could read a private dictation from the process list.
+  function copyText(t) {
+    if (copyProc.running) copyProc.running = false
+    copyProc.pending = t
+    copyProc.running = true
+    message = "Copied"
+  }
   function clearRecent() { recent = []; send(["clear-recent"]) }
   function runSetup() { message = "Setting up… Voxtype restarts and Hyprland reloads."; send(["setup", hotkey]) }
   function removeSetup() { message = "Removing Softly's setup…"; send(["teardown"]) }
@@ -265,6 +272,15 @@ Panel {
                              service: root.service, daemon: root.daemon, model: root.model, message: root.message})
     }
   }
+  Process {
+    id: copyProc
+    property string pending: ""
+    command: ["wl-copy"]
+    stdinEnabled: true
+    onStarted: { write(pending); pending = ""; stdinEnabled = false }
+    onExited: stdinEnabled = true
+  }
+
   Process {
     id: readProc
     command: ["/usr/bin/python", root.helper, "state"]
