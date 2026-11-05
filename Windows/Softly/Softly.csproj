@@ -12,7 +12,7 @@
     <RootNamespace>Softly</RootNamespace>
     <AssemblyName>Softly</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.4.2</Version>
+    <Version>0.5.0</Version>
     <Product>Softly</Product>
     <Company>DeNon Maryland</Company>
   </PropertyGroup>
