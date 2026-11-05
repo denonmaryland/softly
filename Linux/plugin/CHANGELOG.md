@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.0
+
+- Ready for Omarchy 4.5, which binds Alt + Space and holding Right Alt to
+  its own dictation. Softly stays in charge by default and switches those
+  keys off, so Right Alt no longer starts Voxtype twice and a tap no longer
+  stops the recording straight away. Omarchy 4.0.x works as before.
+- New on Omarchy 4.5: Key, language & pill › Dictation keys. Pick
+  Omarchy dictation to hand the keys to Omarchy's own setup (Voxtype or
+  Superwhisper, chosen under Setup › Defaults › Dictation); Softly then binds
+  no key. Pick Softly to take them back. Hidden on Omarchy 4.0.
+- Picking F9 also takes over the F9 dictation key the Omarchy 4.5 update
+  keeps for people who already dictated, and picking Super + Ctrl + X does
+  the same for that key.
+- Clearer help when Voxtype is missing: where to install it on Omarchy 4.0
+  and on 4.5, where a fresh install defaults to Superwhisper.
+- After updating, the popover offers Apply once: it rewrites softly.lua
+  with the Omarchy 4.5 rules (Voxtype restarts and Hyprland reloads).
+
 ## 0.4.2
 
 - No changes to the plugin. 0.4.1's Mac build failed on the release

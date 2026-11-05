@@ -20,6 +20,8 @@
     control.py check-update          -> compare the manifest version with the latest GitHub release
     control.py update                -> run `omarchy plugin update` when a newer release exists
     control.py setup <key>           -> with the user's consent: paste helper, Voxtype output, Hyprland module
+    control.py hotkey <key>          -> save the dictation key and rewrite the Hyprland module for it
+    control.py mode softly|omarchy [key] -> who owns the dictation keys (Omarchy 4.5+ only; softly.json)
     control.py teardown              -> undo setup (settings and vocabulary stay)
 
 Sounds are read live by Service.qml from softly.json, and so are the fixes,
@@ -186,6 +188,8 @@ VOXTYPE_KEYS = {
     "osd.enabled": "false",      # the pill replaces Voxtype's overlay
     "hotkey.enabled": "false",   # Hyprland drives it
 }
+VOXTYPE_MISSING = ("Voxtype is not installed. Install it first: Install > AI > Dictation on Omarchy 4.0, "
+                   "Setup > Defaults > Dictation > Voxtype on Omarchy 4.5.")
 HOTKEY_RE = re.compile(r"^[A-Za-z0-9_]+( *\+ *[A-Za-z0-9_]+)*$")
 
 
@@ -215,6 +219,45 @@ def module_hotkey():
     return m.group(1).strip() if m else ""
 
 
+def module_mode():
+    m = re.search(r"^-- softly-mode: (\w+)", read_text(MODULE), re.M)
+    return m.group(1) if m else "softly"
+
+
+# ---------- Omarchy's own dictation (4.5 and newer) ----------
+# Omarchy 4.5 runs dictation itself: `omarchy-dictation start|stop|toggle`
+# drives the app picked in Setup > Defaults > Dictation (Voxtype or
+# Superwhisper), bound to Alt + Space (toggle) and Right Alt (hold), and its
+# update keeps F9 / Super + Ctrl + X in bindings.lua for people who dictated
+# before. Omarchy 4.0 has none of that and binds F9 / Super + Ctrl + X to
+# Voxtype directly. hl.unbind drops every bind made with the same key string
+# (spaces and case aside), press and release halves alike, so these are the
+# exact strings Omarchy binds them with.
+OMARCHY_DICTATION_KEYS = ("ALT + SPACE", "ALT + Alt_R")
+OMARCHY_LEGACY_KEYS = ("F9", "SUPER + CTRL + X")
+MODES = ("softly", "omarchy")
+
+
+def omarchy_dictation():
+    """True on Omarchy 4.5 and newer, which bind dictation keys of their own."""
+    return shutil.which("omarchy-dictation") is not None
+
+
+def omarchy_dictation_info():
+    """None before Omarchy 4.5; else the dictation app Omarchy's keys run."""
+    if not omarchy_dictation():
+        return None
+    code, out, _ = run(["omarchy-default-dictation"])
+    backend = out if code == 0 and re.fullmatch(r"[a-z0-9][a-z0-9-]*", out) else ""
+    return {"backend": backend, "installed": bool(backend) and shutil.which(backend) is not None}
+
+
+def dictation_mode():
+    """softly (the default): Softly's key drives Voxtype. omarchy: Omarchy's
+    own dictation keys do, and Softly binds none; only where Omarchy has them."""
+    return "omarchy" if read_settings().get("dictationMode") == "omarchy" and omarchy_dictation() else "softly"
+
+
 # A modifier pressed on its own (Right Alt, say) is still held when Hyprland
 # matches its release, so the release bind needs the modifier in front.
 MODIFIER_KEYS = {"alt": "ALT", "super": "SUPER", "control": "CTRL", "shift": "SHIFT", "meta": "ALT"}
@@ -229,11 +272,39 @@ def release_keys(hotkey):
     return " + ".join(parts)
 
 
-def render_module(hotkey):
+def key_id(keys):
+    parts = [p.strip().upper() for p in keys.split("+") if p.strip()]
+    mods = frozenset("CTRL" if p == "CONTROL" else p for p in parts[:-1])
+    return mods, parts[-1] if parts else ""
+
+
+def softly_keys(hotkey):
+    """Softly's own binds, after taking the key from an Omarchy dictation bind."""
+    same = [k for k in OMARCHY_LEGACY_KEYS if key_id(k) == key_id(hotkey)]
+    lines = ['hl.unbind("%s")  -- Omarchy binds %s to its own dictation' % (same[0], same[0]) if same
+             else "-- (Omarchy's F9 and Super + Ctrl + X dictation keys are left alone)"]
+    lines.append('o.bind("%s", "Softly: tap or hold to dictate", "omarchy-shell %s press")' % (hotkey, ID))
+    lines.append('o.bind("%s", "Softly: release", "omarchy-shell %s release", { release = true })' % (release_keys(hotkey), ID))
+    return lines
+
+
+def render_module(hotkey, mode="softly"):
     with open(os.path.join(PLUGIN_DIR, "hypr", "module.lua")) as f:
         text = f.read()
-    unbind = 'hl.unbind("F9")  -- Omarchy binds F9 to Voxtype itself' if hotkey.replace(" ", "").upper() == "F9" else "-- (the stock F9 Voxtype binding is left alone)"
-    return text.replace("@RELEASE@", release_keys(hotkey)).replace("@HOTKEY@", hotkey).replace("@UNBIND@", unbind)
+    if mode == "omarchy":
+        summary = "Softly: Omarchy's own dictation keys are in charge; Softly binds none."
+        keys = ["-- Omarchy 4.5 binds Alt + Space and Right Alt to the dictation app picked in",
+                "-- Setup > Defaults > Dictation; Softly leaves those keys alone. Omarchy 4.0",
+                "-- has no o.dictation_installed and no such keys, so Softly keeps %s there." % hotkey,
+                "if not o.dictation_installed then"] + ["  " + l for l in softly_keys(hotkey)] + ["end"]
+    else:
+        summary = "Softly: tap %s to start and again to finish, or hold it to talk." % hotkey
+        keys = ["-- Omarchy 4.5 binds Alt + Space and Right Alt to its own dictation, which would",
+                "-- start Voxtype a second time; Softly drives Voxtype itself, so it takes them",
+                "-- back. Omarchy 4.0 has no o.dictation_installed and skips this.",
+                "if o.dictation_installed then"] + ['  hl.unbind("%s")' % k for k in OMARCHY_DICTATION_KEYS] + ["end"] + softly_keys(hotkey)
+    return (text.replace("@HOTKEY@", hotkey).replace("@MODE@", mode)
+            .replace("@SUMMARY@", summary).replace("@KEYS@", "\n".join(keys)))
 
 
 def voxtype_get(key):
@@ -248,9 +319,24 @@ def setup_state():
     return {
         "paste": paste_ok, "voxtype": vox_ok, "hypr": hypr_ok,
         "complete": paste_ok and vox_ok and hypr_ok,
+        "stale": hypr_ok and module_stale(),
         "hotkey": module_hotkey(),
+        "mode": module_mode(),
         "voxtypeInstalled": shutil.which("voxtype") is not None,
     }
+
+
+def module_stale():
+    """True when softly.lua differs from what this version writes for its key
+    and mode, as after an update (Omarchy 4.5 rules) or a mode switch made
+    before Set up. Apply in the panel rewrites it."""
+    hotkey = module_hotkey()
+    if not HOTKEY_RE.match(hotkey):
+        return False
+    try:
+        return read_text(MODULE) != render_module(hotkey, dictation_mode())
+    except OSError:
+        return False
 
 
 def hypr_errors():
@@ -264,7 +350,7 @@ def setup(hotkey):
     if not HOTKEY_RE.match(hotkey):
         return ["Not a usable key name: " + hotkey]
     if shutil.which("voxtype") is None:
-        return ["Voxtype is not installed. It ships with Omarchy; install it first."]
+        return [VOXTYPE_MISSING]
     if run(["hyprctl", "version"])[0] != 0:
         return ["Hyprland is not running"]
     errors = []
@@ -288,7 +374,7 @@ def setup(hotkey):
     # 3. Hyprland: the module, loaded by one marked line.
     backup(HYPRLAND)
     try:
-        atomic_write(MODULE, render_module(hotkey))
+        atomic_write(MODULE, render_module(hotkey, dictation_mode()))
         text = read_text(HYPRLAND)
         if MARK not in text:
             if text and not text.endswith("\n"):
@@ -314,9 +400,14 @@ def set_hotkey(hotkey):
         return ["Could not save the key: " + (err or out).strip()]
     if not (MARK in read_text(HYPRLAND) and os.path.exists(MODULE)):
         return []  # applied by Set up later
+    return apply_module(render_module(hotkey, dictation_mode()), "that key")
+
+
+def apply_module(text, what):
+    """Rewrites the Hyprland module and reloads; puts the old one back if Hyprland objects."""
     old = read_text(MODULE)
     try:
-        atomic_write(MODULE, render_module(hotkey))
+        atomic_write(MODULE, text)
     except OSError as e:
         return ["Could not write the Hyprland module: " + str(e)]
     run(["hyprctl", "reload"])
@@ -324,8 +415,36 @@ def set_hotkey(hotkey):
     if problems:
         atomic_write(MODULE, old)
         run(["hyprctl", "reload"])
-        return ["Hyprland rejected that key: " + problems[0]]
+        return ["Hyprland rejected %s: %s" % (what, problems[0])]
     return []
+
+
+def set_mode(mode, hotkey=""):
+    """Softly's key drives Voxtype (softly), or Omarchy 4.5's own dictation
+    keys run the app picked in Omarchy (omarchy) and Softly binds none.
+    Nothing is registered with Omarchy and Voxtype's settings stay as they are."""
+    if mode not in MODES:
+        return ["Unknown dictation mode: " + mode]
+    if mode == "omarchy" and not omarchy_dictation():
+        return ["Omarchy's own dictation keys need Omarchy 4.5 or newer."]
+    settings = read_settings()
+    previous = settings.get("dictationMode")
+    settings["dictationMode"] = mode
+    write_settings(settings)
+    if not (MARK in read_text(HYPRLAND) and os.path.exists(MODULE)):
+        return []  # applied by Set up later
+    key = module_hotkey() or hotkey.strip() or "F9"
+    if not HOTKEY_RE.match(key):
+        return ["Not a usable key name: " + key]
+    errors = apply_module(render_module(key, mode), "the change")
+    if errors:
+        settings = read_settings()
+        if previous is None:
+            settings.pop("dictationMode", None)
+        else:
+            settings["dictationMode"] = previous
+        write_settings(settings)
+    return errors
 
 
 def without_loader(text):
@@ -742,6 +861,8 @@ def state(errors=None):
         "recent": read_recent(),
         "version": plugin_version(),
         "setup": setup_state(),
+        "dictationMode": dictation_mode(),
+        "omarchyDictation": omarchy_dictation_info(),
     }
 
 
@@ -807,6 +928,8 @@ def main(argv):
         errors = setup(argv[2])
     elif cmd == "hotkey" and len(argv) == 3:
         errors = set_hotkey(argv[2])
+    elif cmd == "mode" and len(argv) in (3, 4):
+        errors = set_mode(argv[2], argv[3] if len(argv) == 4 else "")
     elif cmd == "teardown":
         errors = teardown()
     elif cmd != "state":

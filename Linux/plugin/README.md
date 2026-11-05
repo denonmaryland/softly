@@ -8,6 +8,7 @@ Tap a key, speak, tap again, and the words land where your cursor is. Nothing le
 <p>
 <a href="https://github.com/denonmaryland/omarchy-softly/releases"><img alt="Release" src="https://img.shields.io/github/v/release/denonmaryland/omarchy-softly?style=flat-square&label=release&color=4C8DFF"></a>
 <a href="https://omarchyplugins.com/"><img alt="Omarchy plugin" src="https://img.shields.io/badge/omarchy-plugin-4C8DFF?style=flat-square"></a>
+<img alt="Omarchy 4.0.x and 4.5" src="https://img.shields.io/badge/omarchy-4.0.x%20%C2%B7%204.5-1E2330?style=flat-square">
 <img alt="Runs locally" src="https://img.shields.io/badge/whisper-on%20device-1E2330?style=flat-square">
 <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-1E2330?style=flat-square"></a>
 <a href="https://github.com/denonmaryland/softly"><img alt="Also on macOS and Windows" src="https://img.shields.io/badge/also%20on-macOS%20%C2%B7%20Windows-1E2330?style=flat-square"></a>
@@ -68,7 +69,7 @@ Click the microphone in the bar. Everything Softly can be asked lives here, and 
 omarchy plugin add https://github.com/denonmaryland/omarchy-softly --enable
 ```
 
-Then click the microphone icon in the bar and press **Set up Softly**. Softly only writes to your system after that press, and it backs every file up first (`name.bak.<time>-softly`). Prefer a different key? Set **Dictation key** in the widget's settings, then press **Apply** in the popover.
+Works on **Omarchy 4.0.x and 4.5**. Then click the microphone icon in the bar and press **Set up Softly**. Softly only writes to your system after that press, and it backs every file up first (`name.bak.<time>-softly`). Prefer a different key? Set **Dictation key** in the widget's settings, then press **Apply** in the popover.
 
 <details>
 <summary><strong>What Set up writes</strong></summary>
@@ -76,7 +77,17 @@ Then click the microphone icon in the bar and press **Set up Softly**. Softly on
 
 1. `~/.local/bin/softly-paste`, the app-aware paste helper.
 2. Voxtype's output settings in `~/.config/voxtype/config.toml`: clipboard output through that helper, Voxtype's own overlay and hotkey off.
-3. `~/.config/hypr/softly.lua` for your dictation key, loaded by one marked line at the end of `~/.config/hypr/hyprland.lua`. With F9 it replaces Omarchy's stock Voxtype binding; other keys leave F9 alone.
+3. `~/.config/hypr/softly.lua` for your dictation key, loaded by one marked line at the end of `~/.config/hypr/hyprland.lua`. With F9 it takes over Omarchy's own F9 dictation binding (stock on Omarchy 4.0; the 4.5 update keeps it in `bindings.lua` for people who already dictated); other keys leave F9 alone. On Omarchy 4.5 it also switches off Omarchy's Alt + Space and Right Alt dictation keys, unless you hand dictation to Omarchy (below).
+
+</details>
+
+<details>
+<summary><strong>Omarchy 4.5's own dictation keys</strong></summary>
+<br>
+
+Omarchy 4.5 binds <kbd>Alt</kbd>+<kbd>Space</kbd> (toggle) and holding <kbd>Right Alt</kbd> to its own dictation, which runs the app picked under **Setup › Defaults › Dictation** (Voxtype or Superwhisper). Softly stays in charge by default: its module switches those two keys off, so Voxtype never starts twice and tap-to-start keeps working.
+
+To use Omarchy's keys instead, open the popover's **Key, language & pill** page and pick **Omarchy dictation** under **Dictation keys**. Softly then binds no dictation key at all and leaves Omarchy's alone; pick **Softly** to get your key back. Nothing is registered with Omarchy and Voxtype's settings are not changed, so with Voxtype as Omarchy's app the pill, paste helper and fixes keep working. On Omarchy 4.0 the option is hidden and nothing changes.
 
 </details>
 
@@ -86,7 +97,7 @@ Then click the microphone icon in the bar and press **Set up Softly**. Softly on
 
 | Path | Why |
 |---|---|
-| `~/.config/omarchy/softly.json` | the sounds switch |
+| `~/.config/omarchy/softly.json` | settings: sounds, tap to start, fixes, pill style, who owns the dictation keys |
 | `$XDG_RUNTIME_DIR/softly/` | recent transcripts (tmpfs, gone at logout) and paste state |
 | `~/.config/voxtype/config.toml` | output settings, on Set up (backed up) |
 | `~/.config/hypr/softly.lua`, one line in `hyprland.lua` | the key binding, on Set up (backed up) |
@@ -98,7 +109,7 @@ Then click the microphone icon in the bar and press **Set up Softly**. Softly on
 <summary><strong>Dependencies</strong></summary>
 <br>
 
-All part of a stock Omarchy install: **Voxtype** (the dictation daemon and its Whisper model; the plugin never installs it, only checks that it is there), `wl-clipboard`, `jq`, `hyprctl`, `python3`. No sudo or pkexec is required. The only service it touches is your own user-level `voxtype` service, restarted after a vocabulary change or Set up. Network access happens only when you press **Check for updates**, which reads the latest release tag on GitHub; updates install through `omarchy plugin update`.
+**Voxtype**, the dictation daemon and its Whisper model. The plugin never installs it, only checks that it is there. On Omarchy 4.0 install it from **Install › AI › Dictation**; on Omarchy 4.5, where a fresh install defaults to Superwhisper, pick **Setup › Defaults › Dictation › Voxtype**. The rest is part of a stock Omarchy install: `wl-clipboard`, `jq`, `hyprctl`, `python3`. No sudo or pkexec is required. The only service it touches is your own user-level `voxtype` service, restarted after a vocabulary change or Set up. Network access happens only when you press **Check for updates**, which reads the latest release tag on GitHub; updates install through `omarchy plugin update`.
 
 </details>
 

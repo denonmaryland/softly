@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.denonmaryland.softly",
   "name": "Softly",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "author": "denonmaryland",
   "description": "Tap a key, speak, tap again: local Whisper dictation through Voxtype with a quiet backlit pill, plus a bar popover for sounds, vocabulary, recent transcripts and status.",
   "kinds": [
@@ -27,7 +27,7 @@
         "key": "hotkey",
         "type": "string",
         "label": "Dictation key",
-        "description": "Hyprland key name such as F9, Alt_R (Right Alt) or SUPER + H. Pick one under Dictation key in the panel; F9 replaces Omarchy's stock Voxtype binding.",
+        "description": "Hyprland key name such as F9, Alt_R (Right Alt) or SUPER + H. Pick one under Dictation key in the panel. F9 takes over Omarchy's own F9 dictation binding (stock on Omarchy 4.0, kept by the 4.5 update for people who already dictated); on Omarchy 4.5 Softly also switches off Alt + Space and Right Alt unless you hand dictation to Omarchy in the panel.",
         "defaultValue": "F9"
       }
     ]

@@ -65,6 +65,15 @@ Panel {
     { id: "F8", label: "F8" }, { id: "F10", label: "F10" }, { id: "F11", label: "F11" }, { id: "F12", label: "F12" }
   ]
   property bool keysOpen: false
+  // Omarchy 4.5 binds dictation keys of its own (Alt + Space, Right Alt).
+  // "softly" (the default) takes them back for Softly's key; "omarchy" leaves
+  // them in charge and Softly binds none. Offered only where Omarchy has them.
+  property string dictationMode: "softly"
+  property var omarchyDictation: null   // null before Omarchy 4.5; else {backend, installed}
+  readonly property bool omarchyMode: dictationMode === "omarchy" && !!omarchyDictation
+  readonly property string omarchyBackendName: !omarchyDictation || !omarchyDictation.backend ? ""
+    : ({ "voxtype": "Voxtype", "superwhisper": "Superwhisper" })[omarchyDictation.backend] || omarchyDictation.backend
+  readonly property string omarchyKeysText: "Alt + Space, or hold Right Alt"
   readonly property bool setUp: !!(setup && setup.complete)
   property var update: null     // {current, latest, available, url} or {error}
   property bool checkingUpdate: false
@@ -78,9 +87,13 @@ Panel {
 
   readonly property bool busy: readProc.running || writeProc.running || pending.length > 0
   readonly property string statusText: setup && !setup.complete ? "Not set up on this machine yet"
+    : omarchyMode && !omarchyBackendName ? "Omarchy dictation has no app yet · Setup › Defaults › Dictation"
+    : omarchyMode && !omarchyDictation.installed ? omarchyBackendName + " is not installed · Setup › Defaults › Dictation"
+    : omarchyMode && omarchyDictation.backend !== "voxtype" ? "Omarchy's keys run " + omarchyBackendName + " · the pill is for Voxtype"
     : service !== "active" ? "Voxtype is not running"
     : daemon === "recording" || daemon === "streaming" ? "Recording…"
     : daemon === "transcribing" ? "Transcribing…"
+    : daemon === "idle" && omarchyMode ? "Ready · Omarchy's keys: " + omarchyKeysText
     : daemon === "idle" ? (tapToStart ? "Ready · tap " + hotkeyLabel + " to start, tap again to finish" : "Ready · hold " + hotkeyLabel + " while you talk") : "Starting…"
 
   function alphaOf(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
@@ -106,10 +119,12 @@ Panel {
       recent = s.recent || []
       version = s.version || ""
       setup = s.setup || null
+      dictationMode = s.dictationMode === "omarchy" ? "omarchy" : "softly"
+      omarchyDictation = s.omarchyDictation || null
       if (s.update) { update = s.update; checkingUpdate = false }
       if (s.errors && s.errors.length) message = s.errors.join("\n")
       else if (message.indexOf("Saving") === 0) message = "Saved · Voxtype restarted"
-      else if (message.indexOf("Setting up") === 0) message = setup && setup.complete ? "Set up · hold " + hotkey + " to dictate" : "Setup did not finish"
+      else if (message.indexOf("Setting up") === 0) message = !(setup && setup.complete) ? "Setup did not finish" : omarchyMode ? "Set up · Omarchy's keys start dictation" : "Set up · hold " + hotkey + " to dictate"
       else if (message.indexOf("Removing") === 0) message = "Softly's setup was removed"
       else if (message.indexOf("Switching model") === 0 || message.indexOf("Switching language") === 0) message = download ? "" : "Saved · Voxtype restarted"
       else if (message.indexOf("Switching") === 0) message = ""
@@ -150,6 +165,12 @@ Panel {
     if (id === hotkey) return
     message = setUp ? "Switching to " + (({ "Alt_R": "Right Alt", "Super_R": "Right Super", "Control_R": "Right Ctrl" })[id] || id) + "…" : ""
     send(["hotkey", id])
+  }
+  function setMode(id) {
+    if (id === dictationMode) return
+    dictationMode = id
+    message = setUp ? "Switching dictation keys…" : ""
+    send(["mode", id, hotkey])
   }
   function stepHotkey(dx) {
     let i = 0
@@ -297,7 +318,7 @@ Panel {
       onMoveRequested: function(dx, dy) {
         if (dy) root.cursor = Math.max(0, Math.min(root.rowCount - 1, root.cursor + dy))
         else if (dx && root.cursor === 3 && root.stylesOpen) root.stepTheme(dx)
-        else if (dx && root.cursor === 2 && root.keysOpen) root.stepHotkey(dx)
+        else if (dx && root.cursor === 2 && root.keysOpen && !root.omarchyMode) root.stepHotkey(dx)
       }
       onActivateRequested: root.activate()
 
@@ -367,20 +388,22 @@ Panel {
 
         // ---------- Set up: three writes, each with consent and a backup ----------
         Column {
-          visible: (root.page === "main") && (root.loaded && root.setup && (!root.setup.complete || (root.setup.hotkey && root.setup.hotkey !== root.hotkey)))
+          visible: (root.page === "main") && (root.loaded && root.setup && (!root.setup.complete || root.setup.stale || (root.setup.hotkey && root.setup.hotkey !== root.hotkey)))
           width: parent.width
           spacing: Style.space(8)
           Text {
-            text: root.setUp ? "NEW KEY" : "SET UP"
+            text: !root.setUp ? "SET UP" : root.setup.hotkey && root.setup.hotkey !== root.hotkey ? "NEW KEY" : "UPDATE"
             color: root.fg; opacity: 0.6
             font.family: root.family; font.pixelSize: Style.font.caption; font.weight: Font.DemiBold
           }
           Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: root.setUp
+            text: root.setUp && root.setup.hotkey && root.setup.hotkey !== root.hotkey
               ? "The dictation key in Softly's settings is " + root.hotkey + ", but Hyprland is set up for " + root.setup.hotkey + "."
-              : "Softly writes three things on this machine, each backed up first: the paste helper to ~/.local/bin, Voxtype's output settings (clipboard through that helper, its own overlay off), and ~/.config/hypr/softly.lua for the " + root.hotkey + " key, loaded by one marked line at the end of hyprland.lua. Remove it any time from this panel."
+              : root.setUp
+              ? "Softly's Hyprland module (~/.config/hypr/softly.lua) was written by an earlier version or for the other dictation keys setting. Apply rewrites it; Voxtype restarts and Hyprland reloads."
+              : "Softly writes three things on this machine, each backed up first: the paste helper to ~/.local/bin, Voxtype's output settings (clipboard through that helper, its own overlay off), and ~/.config/hypr/softly.lua " + (root.omarchyMode ? "(Esc to cancel; Omarchy's own keys start dictation)" : "for the " + root.hotkey + " key") + ", loaded by one marked line at the end of hyprland.lua. Remove it any time from this panel."
             color: root.fg; opacity: 0.7
             font.family: root.family; font.pixelSize: Style.font.caption
           }
@@ -400,12 +423,12 @@ Panel {
           Text {
             visible: root.setup && !root.setup.voxtypeInstalled
             width: parent.width; wrapMode: Text.WordWrap
-            text: "Voxtype is not installed. It ships with Omarchy; install it first, then set up Softly."
+            text: "Voxtype is not installed. Install it first from Omarchy's menu (" + (root.omarchyDictation ? "Setup › Defaults › Dictation › Voxtype" : "Install › AI › Dictation") + "), then set up Softly."
             color: root.fg; opacity: 0.8
             font.family: root.family; font.pixelSize: Style.font.caption
           }
           Button {
-            text: root.setUp ? "Apply " + root.hotkey : "Set up Softly"
+            text: !root.setUp ? "Set up Softly" : root.omarchyMode ? "Apply" : "Apply " + root.hotkey
             foreground: root.fg
             fontFamily: root.family
             bordered: true
@@ -515,7 +538,8 @@ Panel {
 
 
         SwitchRow {
-          visible: root.page === "main"
+          // Omarchy's own keys toggle (Alt + Space) and hold (Right Alt) without Softly.
+          visible: root.page === "main" && !root.omarchyMode
           width: parent.width
           title: "Tap to start and stop"
           caption: root.tapToStart ? "Tap once, talk, tap again to finish. Holding still works." : "Off: hold " + root.hotkeyLabel + " while you talk, let go to finish"
@@ -630,7 +654,7 @@ Panel {
           visible: root.page === "main"
           width: parent.width
           LinkRow { width: parent.width; title: "Words & fixes"; detail: String(root.vocabulary.length + root.fixes.length); onClicked: root.page = "words" }
-          LinkRow { width: parent.width; title: "Key, language & pill"; detail: root.hotkeyLabel + " · " + root.languageName; onClicked: root.page = "settings" }
+          LinkRow { width: parent.width; title: "Key, language & pill"; detail: (root.omarchyMode ? "Omarchy keys" : root.hotkeyLabel) + " · " + root.languageName; onClicked: root.page = "settings" }
         }
 
         Item {
@@ -666,9 +690,62 @@ Panel {
           }
         }
 
+        // ---------- Dictation keys: Softly's, or Omarchy 4.5's own ----------
+        Column {
+          visible: root.page === "settings" && !!root.omarchyDictation
+          width: parent.width
+          spacing: Style.space(8)
+          Column {
+            width: parent.width
+            spacing: Style.space(2)
+            Text { text: "Dictation keys"; color: root.fg; font.family: root.family; font.pixelSize: Style.font.body }
+            Text {
+              width: parent.width; wrapMode: Text.WordWrap
+              text: root.omarchyMode
+                ? "Omarchy's " + root.omarchyKeysText + " run " + (root.omarchyBackendName || "the app picked in Setup › Defaults › Dictation") + "; Softly binds no key." + (root.omarchyDictation && root.omarchyDictation.backend === "voxtype" ? " The pill still shows while Voxtype listens." : "")
+                : "Softly's key drives Voxtype. Omarchy's own " + root.omarchyKeysText + " are switched off so dictation never starts twice."
+              color: root.alphaOf(root.fg, 0.5); font.family: root.family; font.pixelSize: Style.font.caption
+            }
+          }
+          Flow {
+            id: modeChips
+            width: parent.width
+            spacing: Style.space(6)
+            readonly property real cell: Math.floor((width - spacing) / 2)
+            Repeater {
+              model: [{ id: "softly", label: "Softly" }, { id: "omarchy", label: "Omarchy dictation" }]
+              delegate: Rectangle {
+                id: modeChip
+                required property var modelData
+                readonly property bool selected: modelData.id === root.dictationMode
+                width: modeChips.cell; height: Style.space(28); radius: Style.space(8)
+                color: root.alphaOf(root.fg, modeMouse.containsMouse ? 0.1 : 0.05)
+                border.width: selected ? 2 : 1
+                border.color: selected ? root.accent : root.alphaOf(root.fg, 0.14)
+                Text {
+                  anchors.centerIn: parent
+                  text: modeChip.modelData.label
+                  color: root.fg
+                  opacity: modeChip.selected ? 1 : 0.75
+                  font.family: root.family; font.pixelSize: Style.font.caption
+                  font.weight: modeChip.selected ? Font.DemiBold : Font.Normal
+                }
+                MouseArea {
+                  id: modeMouse
+                  anchors.fill: parent
+                  hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                  enabled: !root.busy && root.loaded
+                  onClicked: root.setMode(modeChip.modelData.id)
+                }
+              }
+            }
+          }
+        }
+
+
         // ---------- Dictation key: a short list that works on its own ----------
         Column {
-          visible: root.page === "settings"
+          visible: root.page === "settings" && !root.omarchyMode
           width: parent.width
           spacing: Style.space(8)
           Item {
